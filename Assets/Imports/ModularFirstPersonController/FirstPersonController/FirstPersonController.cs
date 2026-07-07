@@ -47,6 +47,9 @@ public class FirstPersonController : MonoBehaviour
     public AmmoDisplay ammoDisplay;
     public WeaponManager weaponManager;
 
+    // Player Health
+    private PlayerHealth playerHealth;
+
     #region Camera Zoom Variables
 
     public bool enableZoom = true;
@@ -210,6 +213,9 @@ public class FirstPersonController : MonoBehaviour
 
         // Setup Ammo UI
         SetupAmmoDisplay();
+
+        // Setup Player Health
+        SetupPlayerHealth();
     }
 
     void SetupAmmoDisplay()
@@ -320,11 +326,45 @@ public class FirstPersonController : MonoBehaviour
         }
     }
 
+    void SetupPlayerHealth()
+    {
+        playerHealth = GetComponent<PlayerHealth>();
+        if (playerHealth != null)
+        {
+            playerHealth.OnDied += OnPlayerDeath;
+        }
+        else
+        {
+            Debug.LogWarning("PlayerHealth component not found on player. Add PlayerHealth to the player GameObject.", this);
+        }
+    }
+
+    void OnPlayerDeath()
+    {
+        // Disable player controls on death
+        cameraCanMove = false;
+        playerCanMove = false;
+        
+        // Unlock cursor for death UI or respawn menu
+        Cursor.lockState = CursorLockMode.None;
+        
+        // Cancel zoom and sprint states
+        isZoomed = false;
+        isSprinting = false;
+
+        Debug.Log("Player died. Controls disabled.");
+    }
+
     void OnDestroy()
     {
         if (weaponManager != null)
         {
             weaponManager.ActiveWeaponChanged -= OnActiveWeaponChanged;
+        }
+
+        if (playerHealth != null)
+        {
+            playerHealth.OnDied -= OnPlayerDeath;
         }
     }
 

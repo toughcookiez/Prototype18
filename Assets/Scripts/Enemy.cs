@@ -52,6 +52,7 @@ public class Enemy : MonoBehaviour
     public float damage = 10f;
     private float lastAttackTime = -Mathf.Infinity;
     private bool isAttacking = false;
+    private bool hasDealtDamageThisSwing = false;
 
     [Header("Hit Stagger")]
     public bool staggerOnHeavyHitsOnly = true;
@@ -177,7 +178,47 @@ public class Enemy : MonoBehaviour
             animator.SetTrigger(attackTriggerHash);
         }
 
-        Debug.Log($"Enemy attacks! (Debug: Successful hit on player)");
+        // Reset damage gate for this swing
+        hasDealtDamageThisSwing = false;
+    }
+
+    /// <summary>
+    /// Called by animation event during attack swing to apply damage to player.
+    /// Ensures damage is only applied once per swing despite multiple animation events.
+    /// </summary>
+    public void DealAttackDamage()
+    {
+        // Guard clauses
+        if (isDead)
+            return;
+
+        if (hasDealtDamageThisSwing)
+            return;
+
+        if (playerTransform == null)
+        {
+            Debug.LogWarning("Player transform not found, cannot deal damage.");
+            return;
+        }
+
+        // Check if still in range
+        float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
+        if (distanceToPlayer > attackRange)
+        {
+            return;
+        }
+
+        // Try to get player health and apply damage
+        PlayerHealth playerHealth = playerTransform.GetComponent<PlayerHealth>();
+        if (playerHealth == null || playerHealth.IsDead)
+        {
+            return;
+        }
+
+        // Apply damage
+        playerHealth.TakeDamage(damage);
+        hasDealtDamageThisSwing = true;
+        Debug.Log($"Enemy dealt {damage} damage to player!");
     }
 
     void SetMovementAnimation(bool isMoving)
