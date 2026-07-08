@@ -63,6 +63,7 @@ public class FirstPersonController : MonoBehaviour
     private bool isZoomed = false;
     private bool lastAimState;
     private bool lastSprintState;
+    private bool lastMoveState;
     private bool hasPushedAnimationStates;
 
     #endregion
@@ -613,7 +614,28 @@ public class FirstPersonController : MonoBehaviour
                     sprintBarCG.alpha -= 3 * Time.deltaTime;
                 }
 
-                targetVelocity = transform.TransformDirection(targetVelocity) * walkSpeed;
+                float movementSpeed = walkSpeed;
+                if (enableZoom && isZoomed)
+                {
+                    WeaponHandler activeWeapon = null;
+                    if (weaponManager != null)
+                    {
+                        activeWeapon = weaponManager.ActiveWeapon;
+                    }
+
+                    if (activeWeapon == null)
+                    {
+                        activeWeapon = GetComponentInChildren<WeaponHandler>(true);
+                    }
+
+                    float weaponAimMoveMultiplier = activeWeapon != null
+                        ? Mathf.Clamp(activeWeapon.aimMoveSpeedMultiplier, 0.1f, 1f)
+                        : 1f;
+
+                    movementSpeed *= weaponAimMoveMultiplier;
+                }
+
+                targetVelocity = transform.TransformDirection(targetVelocity) * movementSpeed;
 
                 // Apply a force that attempts to reach our target velocity
                 Vector3 velocity = rb.linearVelocity;
@@ -717,24 +739,52 @@ public class FirstPersonController : MonoBehaviour
 
     void PushArmsAnimationStates(bool force = false)
     {
-        if (armsAnimatorBridge == null)
-            return;
-
         bool currentAimState = enableZoom && isZoomed && !isSprinting;
         bool currentSprintState = enableSprint && isSprinting;
+        bool currentMoveState = playerCanMove && rb != null && new Vector2(rb.linearVelocity.x, rb.linearVelocity.z).sqrMagnitude > 0.0001f;
 
-        if (force || !hasPushedAnimationStates || currentAimState != lastAimState)
+        if (armsAnimatorBridge != null && (force || !hasPushedAnimationStates || currentAimState != lastAimState))
         {
             armsAnimatorBridge.SetAimState(currentAimState);
-            lastAimState = currentAimState;
         }
 
-        if (force || !hasPushedAnimationStates || currentSprintState != lastSprintState)
+        if (armsAnimatorBridge != null && (force || !hasPushedAnimationStates || currentSprintState != lastSprintState))
         {
             armsAnimatorBridge.SetSprintState(currentSprintState);
-            lastSprintState = currentSprintState;
         }
 
+        WeaponHandler activeWeapon = null;
+        if (weaponManager != null)
+        {
+            activeWeapon = weaponManager.ActiveWeapon;
+        }
+
+        if (activeWeapon == null)
+        {
+            activeWeapon = GetComponentInChildren<WeaponHandler>(true);
+        }
+
+        if (activeWeapon != null)
+        {
+            if (force || !hasPushedAnimationStates || currentAimState != lastAimState)
+            {
+                activeWeapon.SetAimState(currentAimState);
+            }
+
+            if (force || !hasPushedAnimationStates || currentSprintState != lastSprintState)
+            {
+                activeWeapon.SetSprintState(currentSprintState);
+            }
+
+            if (force || !hasPushedAnimationStates || currentMoveState != lastMoveState)
+            {
+                activeWeapon.SetMoveState(currentMoveState);
+            }
+        }
+
+        lastAimState = currentAimState;
+        lastSprintState = currentSprintState;
+        lastMoveState = currentMoveState;
         hasPushedAnimationStates = true;
     }
 }

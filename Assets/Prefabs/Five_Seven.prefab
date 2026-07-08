@@ -163,6 +163,11 @@ MonoBehaviour:
   hitMask:
     serializedVersion: 2
     m_Bits: 55
+  hipSpreadDegrees: 1.5
+  aimSpreadDegrees: 0.25
+  sprintSpreadDegrees: 3
+  movementSpreadBonusDegrees: 0.75
+  aimMoveSpeedMultiplier: 0.45
   animatorBindings:
     holdTriggerParam: FiveSeven_Hold
     fireTriggerParam: FiveSeven_Fire

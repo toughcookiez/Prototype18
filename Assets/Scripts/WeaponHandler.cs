@@ -186,6 +186,13 @@ public class WeaponHandler : MonoBehaviour
     public float range = 100f;
     public LayerMask hitMask = ~0;
 
+    [Header("Accuracy")]
+    [Min(0f)] public float hipSpreadDegrees = 1.5f;
+    [Min(0f)] public float aimSpreadDegrees = 0.25f;
+    [Min(0f)] public float sprintSpreadDegrees = 3f;
+    [Min(0f)] public float movementSpreadBonusDegrees = 0.75f;
+    [Range(0.1f, 1f)] public float aimMoveSpeedMultiplier = 0.8f;
+
     [Header("Animation")]
     public WeaponAnimatorBindings animatorBindings = new WeaponAnimatorBindings();
 
@@ -209,6 +216,9 @@ public class WeaponHandler : MonoBehaviour
     float lastEmptyAmmoSoundTime = -999f;
     bool isReloading;
     Coroutine reloadRoutine;
+    bool isAiming;
+    bool isSprinting;
+    bool isMoving;
 
     public event Action<int, int> AmmoChanged;
     public event Action<WeaponHandler> FirePerformed;
@@ -235,6 +245,11 @@ public class WeaponHandler : MonoBehaviour
         if (bodyPartDamage == null)
             bodyPartDamage = new BodyPartDamageSettings();
         bodyPartDamage.Clamp();
+        hipSpreadDegrees = Mathf.Max(0f, hipSpreadDegrees);
+        aimSpreadDegrees = Mathf.Max(0f, aimSpreadDegrees);
+        sprintSpreadDegrees = Mathf.Max(0f, sprintSpreadDegrees);
+        movementSpreadBonusDegrees = Mathf.Max(0f, movementSpreadBonusDegrees);
+        aimMoveSpeedMultiplier = Mathf.Clamp(aimMoveSpeedMultiplier, 0.1f, 1f);
         EnsureAnimatorBindings();
     }
 
@@ -376,12 +391,13 @@ public class WeaponHandler : MonoBehaviour
         {
             Ray cameraRay = fpsCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             origin = cameraRay.origin;
-            direction = cameraRay.direction;
+            direction = GetSpreadDirection(cameraRay.direction, fpsCamera.transform.right, fpsCamera.transform.up);
         }
         else
         {
             origin = muzzleTransform != null ? muzzleTransform.position : transform.position;
-            direction = muzzleTransform != null ? muzzleTransform.forward : transform.forward;
+            Transform directionTransform = muzzleTransform != null ? muzzleTransform : transform;
+            direction = GetSpreadDirection(directionTransform.forward, directionTransform.right, directionTransform.up);
         }
 
         if (Physics.Raycast(origin, direction, out RaycastHit hit, range, hitMask, QueryTriggerInteraction.Collide))
@@ -454,6 +470,43 @@ public class WeaponHandler : MonoBehaviour
     public void SetCamera(Camera cam)
     {
         fpsCamera = cam;
+    }
+
+    public void SetAimState(bool aiming)
+    {
+        isAiming = aiming;
+    }
+
+    public void SetSprintState(bool sprinting)
+    {
+        isSprinting = sprinting;
+    }
+
+    public void SetMoveState(bool moving)
+    {
+        isMoving = moving;
+    }
+
+    Vector3 GetSpreadDirection(Vector3 forward, Vector3 right, Vector3 up)
+    {
+        float spreadDegrees = GetCurrentSpreadDegrees();
+        if (spreadDegrees <= 0f)
+            return forward.normalized;
+
+        float spreadRadius = Mathf.Tan(spreadDegrees * Mathf.Deg2Rad);
+        Vector2 offset = UnityEngine.Random.insideUnitCircle * spreadRadius;
+        return (forward + right * offset.x + up * offset.y).normalized;
+    }
+
+    float GetCurrentSpreadDegrees()
+    {
+        float spread = isSprinting ? sprintSpreadDegrees : (isAiming ? aimSpreadDegrees : hipSpreadDegrees);
+        if (isMoving)
+        {
+            spread += movementSpreadBonusDegrees;
+        }
+
+        return Mathf.Max(0f, spread);
     }
 
     void EnsureAnimatorBindings()
