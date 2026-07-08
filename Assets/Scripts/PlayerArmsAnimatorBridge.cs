@@ -11,6 +11,7 @@ public class PlayerArmsAnimatorBridge : MonoBehaviour
 
     WeaponHandler activeWeapon;
     Animator activeGunAnimator;
+    bool currentAimState;
 
     void Awake()
     {
@@ -41,10 +42,13 @@ public class PlayerArmsAnimatorBridge : MonoBehaviour
         DetachWeaponEvents(activeWeapon);
         activeWeapon = null;
         activeGunAnimator = null;
+        currentAimState = false;
     }
 
     public void SetAimState(bool isAiming)
     {
+        currentAimState = isAiming;
+
         if (activeWeapon == null)
             return;
 
@@ -107,7 +111,16 @@ public class PlayerArmsAnimatorBridge : MonoBehaviour
         if (weapon != activeWeapon)
             return;
 
-        TrySetTrigger(weapon.animatorBindings.FireTriggerHash, weapon.animatorBindings.fireTriggerParam);
+        int fireTriggerHash = weapon.animatorBindings.FireTriggerHash;
+        string fireTriggerParam = weapon.animatorBindings.fireTriggerParam;
+
+        if (currentAimState && weapon.animatorBindings.AimFireTriggerHash != 0)
+        {
+            fireTriggerHash = weapon.animatorBindings.AimFireTriggerHash;
+            fireTriggerParam = weapon.animatorBindings.aimFireTriggerParam;
+        }
+
+        TrySetTrigger(fireTriggerHash, fireTriggerParam);
     }
 
     void OnWeaponReloadStarted(WeaponHandler weapon)

@@ -46,6 +46,7 @@ public class FirstPersonController : MonoBehaviour
     [Header("Ammo UI")]
     public AmmoDisplay ammoDisplay;
     public WeaponManager weaponManager;
+    public PlayerArmsAnimatorBridge armsAnimatorBridge;
 
     // Player Health
     private PlayerHealth playerHealth;
@@ -60,6 +61,9 @@ public class FirstPersonController : MonoBehaviour
 
     // Internal Variables
     private bool isZoomed = false;
+    private bool lastAimState;
+    private bool lastSprintState;
+    private bool hasPushedAnimationStates;
 
     #endregion
     #endregion
@@ -162,6 +166,11 @@ public class FirstPersonController : MonoBehaviour
 
     void Start()
     {
+        if (armsAnimatorBridge == null)
+        {
+            armsAnimatorBridge = GetComponentInChildren<PlayerArmsAnimatorBridge>(true);
+        }
+
         if(lockCursor)
         {
             Cursor.lockState = CursorLockMode.Locked;
@@ -351,12 +360,19 @@ public class FirstPersonController : MonoBehaviour
         // Cancel zoom and sprint states
         isZoomed = false;
         isSprinting = false;
+        PushArmsAnimationStates(true);
 
         Debug.Log("Player died. Controls disabled.");
     }
 
     void OnDestroy()
     {
+        if (armsAnimatorBridge != null)
+        {
+            armsAnimatorBridge.SetAimState(false);
+            armsAnimatorBridge.SetSprintState(false);
+        }
+
         if (weaponManager != null)
         {
             weaponManager.ActiveWeaponChanged -= OnActiveWeaponChanged;
@@ -532,6 +548,8 @@ public class FirstPersonController : MonoBehaviour
         {
             HeadBob();
         }
+
+        PushArmsAnimationStates();
     }
 
     void FixedUpdate()
@@ -695,6 +713,29 @@ public class FirstPersonController : MonoBehaviour
             timer = 0;
             joint.localPosition = new Vector3(Mathf.Lerp(joint.localPosition.x, jointOriginalPos.x, Time.deltaTime * bobSpeed), Mathf.Lerp(joint.localPosition.y, jointOriginalPos.y, Time.deltaTime * bobSpeed), Mathf.Lerp(joint.localPosition.z, jointOriginalPos.z, Time.deltaTime * bobSpeed));
         }
+    }
+
+    void PushArmsAnimationStates(bool force = false)
+    {
+        if (armsAnimatorBridge == null)
+            return;
+
+        bool currentAimState = enableZoom && isZoomed && !isSprinting;
+        bool currentSprintState = enableSprint && isSprinting;
+
+        if (force || !hasPushedAnimationStates || currentAimState != lastAimState)
+        {
+            armsAnimatorBridge.SetAimState(currentAimState);
+            lastAimState = currentAimState;
+        }
+
+        if (force || !hasPushedAnimationStates || currentSprintState != lastSprintState)
+        {
+            armsAnimatorBridge.SetSprintState(currentSprintState);
+            lastSprintState = currentSprintState;
+        }
+
+        hasPushedAnimationStates = true;
     }
 }
 

@@ -166,9 +166,10 @@ MonoBehaviour:
   animatorBindings:
     holdTriggerParam: FiveSeven_Hold
     fireTriggerParam: FiveSeven_Fire
+    aimFireTriggerParam: FiveSeven_AimFire
     reloadStartTriggerParam: FiveSeven_Reload
     reloadCompleteTriggerParam: ReloadComplete
-    aimBoolParam: 
+    aimBoolParam: FiveSeven_Aim
     sprintBoolParam: 
   magazineSize: 15
   currentMagazineAmmo: 15

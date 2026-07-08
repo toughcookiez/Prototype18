@@ -68,6 +68,7 @@ public class WeaponHandler : MonoBehaviour
     {
         public string holdTriggerParam = "HoldDefault";
         public string fireTriggerParam = "Fire";
+        public string aimFireTriggerParam;
         public string reloadStartTriggerParam = "ReloadStart";
         public string reloadCompleteTriggerParam = "ReloadComplete";
         public string aimBoolParam;
@@ -75,6 +76,7 @@ public class WeaponHandler : MonoBehaviour
 
         [NonSerialized] int holdTriggerHash;
         [NonSerialized] int fireTriggerHash;
+        [NonSerialized] int aimFireTriggerHash;
         [NonSerialized] int reloadStartTriggerHash;
         [NonSerialized] int reloadCompleteTriggerHash;
         [NonSerialized] int aimBoolHash;
@@ -96,6 +98,15 @@ public class WeaponHandler : MonoBehaviour
             {
                 EnsureHashesCached();
                 return fireTriggerHash;
+            }
+        }
+
+        public int AimFireTriggerHash
+        {
+            get
+            {
+                EnsureHashesCached();
+                return aimFireTriggerHash;
             }
         }
 
@@ -139,6 +150,7 @@ public class WeaponHandler : MonoBehaviour
         {
             holdTriggerHash = GetParamHash(holdTriggerParam);
             fireTriggerHash = GetParamHash(fireTriggerParam);
+            aimFireTriggerHash = GetParamHash(aimFireTriggerParam);
             reloadStartTriggerHash = GetParamHash(reloadStartTriggerParam);
             reloadCompleteTriggerHash = GetParamHash(reloadCompleteTriggerParam);
             aimBoolHash = GetParamHash(aimBoolParam);
