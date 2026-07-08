@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using System;
 using System.Collections;
 
@@ -23,6 +25,11 @@ public class PlayerHealth : MonoBehaviour
     [Header("Death Animation")]
     public Camera playerCamera;
     public Rigidbody playerRigidbody;
+    public WeaponManager weaponManager;
+    public Animator armsAnimator;
+    public string armsDeathTriggerParam = "Death";
+    public bool enableDeathDesaturation = true;
+    public Volume globalVolume;
     public CanvasGroup fadeCanvasGroup; // For screen fade effect
     public Image gameOverPanel; // Game Over UI panel
     public Vector3 cameraTiltAngle = new Vector3(45f, 0f, 0f); // Camera tilt per axis on death
@@ -34,6 +41,8 @@ public class PlayerHealth : MonoBehaviour
     private Coroutine damageFlashCoroutine;
     private Coroutine criticalPulseCoroutine;
     private Coroutine deathSequenceCoroutine;
+    private int armsDeathTriggerHash;
+    private ColorAdjustments deathColorAdjustments;
 
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
@@ -75,6 +84,31 @@ public class PlayerHealth : MonoBehaviour
         {
             playerRigidbody = GetComponent<Rigidbody>();
         }
+
+        if (weaponManager == null)
+        {
+            weaponManager = GetComponentInChildren<WeaponManager>(true);
+        }
+
+        if (armsAnimator == null)
+        {
+            PlayerArmsAnimatorBridge armsBridge = GetComponentInChildren<PlayerArmsAnimatorBridge>(true);
+            if (armsBridge != null)
+            {
+                armsAnimator = armsBridge.armsAnimator != null ? armsBridge.armsAnimator : armsBridge.GetComponent<Animator>();
+            }
+
+            if (armsAnimator == null)
+            {
+                armsAnimator = GetComponentInChildren<Animator>();
+            }
+        }
+
+        CacheDeathColorAdjustments();
+
+        armsDeathTriggerHash = string.IsNullOrWhiteSpace(armsDeathTriggerParam)
+            ? 0
+            : Animator.StringToHash(armsDeathTriggerParam);
 
         if (fadeCanvasGroup == null)
         {
@@ -189,6 +223,19 @@ public class PlayerHealth : MonoBehaviour
         isDead = true;
         Debug.Log("Player died!");
 
+        ApplyDeathSaturation();
+
+        if (weaponManager != null)
+        {
+            weaponManager.UnequipActiveWeapon();
+            weaponManager.enabled = false;
+        }
+
+        if (armsAnimator != null && armsDeathTriggerHash != 0)
+        {
+            armsAnimator.SetTrigger(armsDeathTriggerHash);
+        }
+
         // Clean up coroutines
         if (damageFlashCoroutine != null)
         {
@@ -207,6 +254,40 @@ public class PlayerHealth : MonoBehaviour
             StopCoroutine(deathSequenceCoroutine);
         }
         deathSequenceCoroutine = StartCoroutine(DeathSequenceCoroutine());
+    }
+
+    void CacheDeathColorAdjustments()
+    {
+        if (globalVolume == null)
+        {
+            Volume[] allVolumes = FindObjectsOfType<Volume>(true);
+            for (int i = 0; i < allVolumes.Length; i++)
+            {
+                if (allVolumes[i] != null && allVolumes[i].isGlobal)
+                {
+                    globalVolume = allVolumes[i];
+                    break;
+                }
+            }
+        }
+
+        if (globalVolume == null || globalVolume.profile == null)
+            return;
+
+        globalVolume.profile.TryGet(out deathColorAdjustments);
+    }
+
+    void ApplyDeathSaturation()
+    {
+        if (!enableDeathDesaturation)
+            return;
+
+        if (deathColorAdjustments == null)
+            return;
+
+        deathColorAdjustments.active = true;
+        deathColorAdjustments.saturation.overrideState = true;
+        deathColorAdjustments.saturation.value = -100f;
     }
 
     IEnumerator DamageFlashCoroutine()
@@ -283,13 +364,6 @@ public class PlayerHealth : MonoBehaviour
         if (fpc != null)
         {
             fpc.enabled = false;
-        }
-
-        // Disable arm animations by disabling Animator if it exists
-        Animator armAnimator = GetComponentInChildren<Animator>();
-        if (armAnimator != null)
-        {
-            armAnimator.enabled = false;
         }
 
         // Enable ragdoll physics

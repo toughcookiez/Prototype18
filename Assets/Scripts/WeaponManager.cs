@@ -153,6 +153,16 @@ public class WeaponManager : MonoBehaviour
         return EquipWeaponByIndex(previousIndex);
     }
 
+    public bool UnequipActiveWeapon()
+    {
+        if (ActiveWeapon == null)
+            return false;
+
+        Destroy(ActiveWeapon.gameObject);
+        SetActiveWeapon(null, -1);
+        return true;
+    }
+
     void HandleSwitchInput()
     {
         if (weapons.Count == 0)
