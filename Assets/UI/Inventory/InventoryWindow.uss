@@ -1,0 +1,73 @@
+.inventory-window {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    display: none;
+}
+
+.inventory-backdrop {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.55);
+}
+
+.inventory-card {
+    width: 640px;
+    max-height: 80%;
+    background-color: rgba(18, 18, 18, 0.95);
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+.inventory-title {
+    font-size: 30px;
+    color: rgb(245, 245, 245);
+    unity-text-align: middle-center;
+    margin-bottom: 14px;
+}
+
+.weapon-list {
+    flex-grow: 1;
+}
+
+.weapon-list .unity-scroll-view__content-container {
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    gap: 10px;
+}
+
+.weapon-button {
+    height: 50px;
+    font-size: 20px;
+    color: rgb(245, 245, 245);
+    unity-text-align: middle-left;
+    padding-left: 16px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    background-color: rgb(44, 44, 44);
+}
+
+.weapon-button:hover {
+    background-color: rgb(66, 66, 66);
+}
+
+.weapon-button:active {
+    background-color: rgb(30, 30, 30);
+}

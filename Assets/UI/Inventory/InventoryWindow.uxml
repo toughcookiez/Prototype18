@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI/Inventory/InventoryWindow.uss?fileID=7433441132597879392&amp;guid=d6e766d634cfaf04191220c3983b7767&amp;type=3#InventoryWindow"/>
+    <ui:VisualElement name="inventory-window" class="inventory-window" style="display: none;">
+        <ui:VisualElement class="inventory-backdrop"/>
+        <ui:VisualElement class="inventory-card">
+            <ui:Label text="SELECT WEAPON" class="inventory-title"/>
+            <ui:ScrollView name="weapon-list" mode="Vertical" class="weapon-list"/>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

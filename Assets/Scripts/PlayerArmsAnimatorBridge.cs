@@ -63,6 +63,11 @@ public class PlayerArmsAnimatorBridge : MonoBehaviour
         TrySetBool(activeWeapon.animatorBindings.SprintBoolHash, activeWeapon.animatorBindings.sprintBoolParam, isSprinting);
     }
 
+    public void ForceHoldCurrentWeapon()
+    {
+        ApplyHoldAnimation(activeWeapon);
+    }
+
     void OnActiveWeaponChanged(WeaponHandler weapon)
     {
         if (activeWeapon == weapon)

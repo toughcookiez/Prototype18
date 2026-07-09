@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using UnityEngine.UIElements;
 using TMPro;
+using UIButton = UnityEngine.UI.Button;
+using UIToolkitButton = UnityEngine.UIElements.Button;
 
 public class WeaponManager : MonoBehaviour
 {
@@ -39,10 +43,30 @@ public class WeaponManager : MonoBehaviour
 
     [Header("Inventory UI")]
     public KeyCode inventoryKey = KeyCode.I;
+    public UIDocument inventoryDocument;
+    public string inventoryRootElementName = "inventory-window";
+    public string inventoryListElementName = "weapon-list";
+    public bool closeMenuAfterSelection = true;
+
+    [Header("Inventory Tablet Animation")]
+    public GameObject inventoryTabletObject;
+    public Animator inventoryArmsAnimator;
+    public string inventoryOpenBoolParameter = "IsInventoryOpen";
+    [Min(0f)] public float inventoryOpenAnimationDelay = 0.2f;
+    [Min(0f)] public float inventoryCloseAnimationDelay = 0.2f;
+
+    [Header("Inventory Gameplay Lock")]
+    public FirstPersonController playerController;
+    public bool disableMovementWhileInventoryOpen = true;
+    public bool disableLookWhileInventoryOpen = true;
+    public bool disableShootingWhileInventoryOpen = true;
+    public bool forceExitAimWhileInventoryOpen = true;
+    public bool autoEnableTriggerRaycasts = true;
+
+    [Header("Inventory UI (Legacy uGUI)")]
     public GameObject inventoryWindow;
     public Transform weaponButtonContainer;
-    public Button weaponButtonPrefab;
-    public bool closeMenuAfterSelection = true;
+    public UIButton weaponButtonPrefab;
 
     public event Action<WeaponHandler> ActiveWeaponChanged;
 
@@ -51,6 +75,17 @@ public class WeaponManager : MonoBehaviour
 
     CursorLockMode previousCursorLockState;
     bool previousCursorVisible;
+    VisualElement inventoryRootElement;
+    VisualElement weaponListElement;
+    int inventoryOpenBoolHash;
+    Coroutine inventoryTransitionRoutine;
+    bool isInventoryTransitioning;
+    bool inventoryControlsLocked;
+    bool inventoryOpenState;
+    bool previousPlayerCanMove;
+    bool previousCameraCanMove;
+    bool hasCachedControllerState;
+    bool hadWeaponWhenInventoryOpened;
 
     void Awake()
     {
@@ -61,12 +96,15 @@ public class WeaponManager : MonoBehaviour
 
         MigrateLegacyWeaponPrefabsIfNeeded();
         CleanupWeapons();
+        ResolveInventoryElements();
+        ResolveRuntimeReferences();
+        CacheAnimatorHashes();
+        EnsureInventoryWorldSpaceInputReady();
         BuildWeaponButtons();
+        SetInventoryVisible(false);
 
-        if (inventoryWindow != null)
-        {
-            inventoryWindow.SetActive(false);
-        }
+        if (inventoryTabletObject != null)
+            inventoryTabletObject.SetActive(false);
 
         if (weapons.Count == 0)
         {
@@ -86,7 +124,7 @@ public class WeaponManager : MonoBehaviour
             ToggleInventoryWindow();
         }
 
-        if (inventoryWindow != null && inventoryWindow.activeSelf && blockSwitchWhileMenuOpen)
+        if (IsInventoryOpen() && blockSwitchWhileMenuOpen)
             return;
 
         HandleSwitchInput();
@@ -94,6 +132,18 @@ public class WeaponManager : MonoBehaviour
 
     void OnDestroy()
     {
+        if (inventoryTransitionRoutine != null)
+            StopCoroutine(inventoryTransitionRoutine);
+
+        if (inventoryControlsLocked)
+        {
+            ApplyInventoryControlLock(false);
+            SetCursorForInventory(false);
+        }
+
+        if (inventoryTabletObject != null)
+            inventoryTabletObject.SetActive(false);
+
         if (ActiveWeapon != null)
         {
             Destroy(ActiveWeapon.gameObject);
@@ -198,13 +248,16 @@ public class WeaponManager : MonoBehaviour
 
     void ToggleInventoryWindow()
     {
-        if (inventoryWindow == null)
+        if (!HasInventoryUI())
         {
-            Debug.LogWarning("Inventory window is not assigned on WeaponManager.", this);
+            Debug.LogWarning("Inventory UI is not assigned on WeaponManager.", this);
             return;
         }
 
-        if (inventoryWindow.activeSelf)
+        if (isInventoryTransitioning)
+            return;
+
+        if (IsInventoryOpen())
             CloseInventoryWindow();
         else
             OpenInventoryWindow();
@@ -212,29 +265,97 @@ public class WeaponManager : MonoBehaviour
 
     void OpenInventoryWindow()
     {
-        if (inventoryWindow == null)
+        if (!HasInventoryUI())
             return;
 
-        previousCursorLockState = Cursor.lockState;
-        previousCursorVisible = Cursor.visible;
+        if (isInventoryTransitioning)
+            return;
 
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
-        inventoryWindow.SetActive(true);
+        if (inventoryTransitionRoutine != null)
+            StopCoroutine(inventoryTransitionRoutine);
+
+        inventoryTransitionRoutine = StartCoroutine(OpenInventorySequence());
+    }
+
+    System.Collections.IEnumerator OpenInventorySequence()
+    {
+        isInventoryTransitioning = true;
+        inventoryOpenState = true;
+        hadWeaponWhenInventoryOpened = ActiveWeapon != null;
+
+        CacheControlRestoreState();
+        ApplyInventoryControlLock(true);
+        SetCursorForInventory(true);
+
+        if (inventoryTabletObject != null)
+            inventoryTabletObject.SetActive(true);
+
+        EnsureInventoryWorldSpaceInputReady();
+        SetInventoryAnimationOpen(true);
+
+        // Re-bind UI Toolkit elements after enabling the tablet hierarchy/UIDocument.
+        yield return null;
+        ResolveInventoryElements();
+        BuildWeaponButtons();
+
+        float delay = Mathf.Max(0f, inventoryOpenAnimationDelay);
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
+        SetInventoryVisible(true);
+
+        inventoryTransitionRoutine = null;
+        isInventoryTransitioning = false;
     }
 
     void CloseInventoryWindow()
     {
-        if (inventoryWindow == null)
+        if (!HasInventoryUI())
             return;
 
-        inventoryWindow.SetActive(false);
-        Cursor.lockState = previousCursorLockState;
-        Cursor.visible = previousCursorVisible;
+        if (isInventoryTransitioning)
+            return;
+
+        if (inventoryTransitionRoutine != null)
+            StopCoroutine(inventoryTransitionRoutine);
+
+        inventoryTransitionRoutine = StartCoroutine(CloseInventorySequence());
+    }
+
+    System.Collections.IEnumerator CloseInventorySequence()
+    {
+        isInventoryTransitioning = true;
+
+        SetInventoryVisible(false);
+        SetInventoryAnimationOpen(false);
+
+        float delay = Mathf.Max(0f, inventoryCloseAnimationDelay);
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
+        if (inventoryTabletObject != null)
+            inventoryTabletObject.SetActive(false);
+
+        ApplyInventoryControlLock(false);
+        RestoreWeaponHoldAfterInventoryClose();
+        SetCursorForInventory(false);
+        inventoryOpenState = false;
+        hadWeaponWhenInventoryOpened = false;
+
+        inventoryTransitionRoutine = null;
+        isInventoryTransitioning = false;
     }
 
     void BuildWeaponButtons()
     {
+        ResolveInventoryElements();
+
+        if (weaponListElement != null)
+        {
+            BuildUIToolkitWeaponButtons();
+            return;
+        }
+
         if (weaponButtonContainer == null || weaponButtonPrefab == null)
             return;
 
@@ -249,7 +370,7 @@ public class WeaponManager : MonoBehaviour
             if (entry == null || entry.prefab == null)
                 continue;
 
-            Button button = Instantiate(weaponButtonPrefab, weaponButtonContainer);
+            UIButton button = Instantiate(weaponButtonPrefab, weaponButtonContainer);
             int capturedIndex = i;
 
             TMP_Text tmpTextComponent = button.GetComponentInChildren<TMP_Text>();
@@ -270,6 +391,314 @@ public class WeaponManager : MonoBehaviour
         }
     }
 
+    void BuildUIToolkitWeaponButtons()
+    {
+        weaponListElement.Clear();
+
+        for (int i = 0; i < weapons.Count; i++)
+        {
+            WeaponSpawnEntry entry = weapons[i];
+            if (entry == null || entry.prefab == null)
+                continue;
+
+            int capturedIndex = i;
+            UIToolkitButton button = new UIToolkitButton(() => OnWeaponButtonClicked(capturedIndex));
+            button.text = entry.GetLabel();
+            button.AddToClassList("weapon-button");
+            weaponListElement.Add(button);
+        }
+    }
+
+    void ResolveInventoryElements()
+    {
+        inventoryRootElement = null;
+        weaponListElement = null;
+
+        if (inventoryDocument == null || inventoryDocument.rootVisualElement == null)
+            return;
+
+        VisualElement root = inventoryDocument.rootVisualElement;
+
+        if (!string.IsNullOrWhiteSpace(inventoryRootElementName))
+            inventoryRootElement = root.Q<VisualElement>(inventoryRootElementName);
+
+        if (inventoryRootElement == null)
+            inventoryRootElement = root;
+
+        if (!string.IsNullOrWhiteSpace(inventoryListElementName))
+            weaponListElement = root.Q<VisualElement>(inventoryListElementName);
+
+        if (weaponListElement == null && inventoryRootElement != null && !string.IsNullOrWhiteSpace(inventoryListElementName))
+            weaponListElement = inventoryRootElement.Q<VisualElement>(inventoryListElementName);
+    }
+
+    bool HasUIToolkitInventory()
+    {
+        return inventoryDocument != null;
+    }
+
+    bool HasInventoryUI()
+    {
+        return inventoryDocument != null || inventoryWindow != null;
+    }
+
+    bool IsInventoryOpen()
+    {
+        if (inventoryOpenState)
+            return true;
+
+        if (inventoryDocument != null)
+        {
+            ResolveInventoryElements();
+            if (inventoryRootElement != null)
+                return inventoryRootElement.style.display != DisplayStyle.None;
+
+            return false;
+        }
+
+        return inventoryWindow != null && inventoryWindow.activeSelf;
+    }
+
+    void SetInventoryVisible(bool isVisible)
+    {
+        if (inventoryDocument != null)
+        {
+            ResolveInventoryElements();
+            if (inventoryRootElement != null)
+            {
+                inventoryRootElement.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
+                return;
+            }
+        }
+
+        if (inventoryWindow != null)
+            inventoryWindow.SetActive(isVisible);
+    }
+
+    void ResolveRuntimeReferences()
+    {
+        if (playerController == null)
+            playerController = GetComponentInParent<FirstPersonController>();
+
+        if (inventoryArmsAnimator == null && playerController != null && playerController.armsAnimatorBridge != null)
+            inventoryArmsAnimator = playerController.armsAnimatorBridge.armsAnimator;
+
+        if (inventoryTabletObject == null && playerController != null)
+        {
+            Transform tabletTransform = FindChildRecursive(playerController.transform, "Tablet");
+            if (tabletTransform != null)
+                inventoryTabletObject = tabletTransform.gameObject;
+        }
+    }
+
+    void EnsureInventoryWorldSpaceInputReady()
+    {
+        if (inventoryDocument == null)
+            return;
+
+        ResolveRuntimeReferences();
+        EnsureWorldSpaceColliderAssigned();
+        EnsurePhysicsRaycasterOnInventoryCamera();
+
+        if (!Physics.queriesHitTriggers)
+        {
+            if (autoEnableTriggerRaycasts)
+            {
+                Physics.queriesHitTriggers = true;
+            }
+            else
+            {
+                Debug.LogWarning("Physics.queriesHitTriggers is disabled. Trigger world-space inventory colliders will not receive pointer raycasts.", this);
+            }
+        }
+
+        if (EventSystem.current == null)
+            Debug.LogWarning("No active EventSystem found. World-space inventory UI will not be interactable.", this);
+    }
+
+    void EnsureWorldSpaceColliderAssigned()
+    {
+        Collider collider = inventoryDocument.GetComponent<Collider>();
+        if (collider == null)
+            collider = inventoryDocument.GetComponentInChildren<Collider>(true);
+
+        if (collider == null)
+        {
+            BoxCollider boxCollider = inventoryDocument.gameObject.AddComponent<BoxCollider>();
+            boxCollider.isTrigger = true;
+            boxCollider.size = new Vector3(1f, 1f, 0.01f);
+            collider = boxCollider;
+            Debug.LogWarning("No world-space collider found for inventory UIDocument. Added a BoxCollider automatically.", this);
+        }
+
+        // Older Unity versions expose the world-space collider only in serialized data,
+        // not as a runtime UIDocument API property. Keeping a collider on/under the
+        // UIDocument object is the compatible fallback for pointer raycasts.
+    }
+
+    void EnsurePhysicsRaycasterOnInventoryCamera()
+    {
+        Camera inventoryCamera = null;
+        if (playerController != null && playerController.playerCamera != null)
+            inventoryCamera = playerController.playerCamera;
+
+        if (inventoryCamera == null)
+            inventoryCamera = Camera.main;
+
+        if (inventoryCamera == null)
+        {
+            Debug.LogWarning("No camera found for inventory UI world-space raycasts.", this);
+            return;
+        }
+
+        if (inventoryCamera.GetComponent<PhysicsRaycaster>() == null)
+        {
+            inventoryCamera.gameObject.AddComponent<PhysicsRaycaster>();
+            Debug.LogWarning("Added PhysicsRaycaster to inventory camera for world-space UI interaction.", inventoryCamera);
+        }
+    }
+
+    static Transform FindChildRecursive(Transform parent, string childName)
+    {
+        if (parent == null || string.IsNullOrWhiteSpace(childName))
+            return null;
+
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            if (child.name == childName)
+                return child;
+
+            Transform nested = FindChildRecursive(child, childName);
+            if (nested != null)
+                return nested;
+        }
+
+        return null;
+    }
+
+    void CacheAnimatorHashes()
+    {
+        if (string.IsNullOrWhiteSpace(inventoryOpenBoolParameter))
+            inventoryOpenBoolHash = 0;
+        else
+            inventoryOpenBoolHash = Animator.StringToHash(inventoryOpenBoolParameter);
+    }
+
+    void CacheControlRestoreState()
+    {
+        ResolveRuntimeReferences();
+
+        hasCachedControllerState = false;
+        if (playerController == null)
+            return;
+
+        previousPlayerCanMove = playerController.playerCanMove;
+        previousCameraCanMove = playerController.cameraCanMove;
+        hasCachedControllerState = true;
+    }
+
+    void ApplyInventoryControlLock(bool lockControls)
+    {
+        inventoryControlsLocked = lockControls;
+        ResolveRuntimeReferences();
+
+        if (playerController != null)
+        {
+            if (disableMovementWhileInventoryOpen)
+                playerController.playerCanMove = lockControls ? false : (hasCachedControllerState ? previousPlayerCanMove : true);
+
+            if (disableLookWhileInventoryOpen)
+                playerController.cameraCanMove = lockControls ? false : (hasCachedControllerState ? previousCameraCanMove : true);
+
+            if (forceExitAimWhileInventoryOpen)
+            {
+                if (playerController.armsAnimatorBridge != null)
+                {
+                    playerController.armsAnimatorBridge.SetAimState(false);
+                    playerController.armsAnimatorBridge.SetSprintState(false);
+                }
+            }
+        }
+
+        if (disableShootingWhileInventoryOpen)
+        {
+            ApplyWeaponInventoryInputLock(ActiveWeapon, lockControls);
+        }
+    }
+
+    void RestoreWeaponHoldAfterInventoryClose()
+    {
+        if (!hadWeaponWhenInventoryOpened || ActiveWeapon == null)
+            return;
+
+        ResolveRuntimeReferences();
+        if (playerController == null || playerController.armsAnimatorBridge == null)
+            return;
+
+        playerController.armsAnimatorBridge.SetAimState(false);
+        playerController.armsAnimatorBridge.SetSprintState(false);
+        playerController.armsAnimatorBridge.ForceHoldCurrentWeapon();
+    }
+
+    void ApplyWeaponInventoryInputLock(WeaponHandler weapon, bool lockInput)
+    {
+        if (weapon == null)
+            return;
+
+        weapon.SetInventoryInputBlocked(lockInput);
+
+        if (lockInput && forceExitAimWhileInventoryOpen)
+        {
+            weapon.SetAimState(false);
+            weapon.SetSprintState(false);
+            weapon.SetMoveState(false);
+        }
+    }
+
+    void SetCursorForInventory(bool isOpen)
+    {
+        if (isOpen)
+        {
+            previousCursorLockState = UnityEngine.Cursor.lockState;
+            previousCursorVisible = UnityEngine.Cursor.visible;
+
+            UnityEngine.Cursor.lockState = CursorLockMode.None;
+            UnityEngine.Cursor.visible = true;
+            return;
+        }
+
+        UnityEngine.Cursor.lockState = previousCursorLockState;
+        UnityEngine.Cursor.visible = previousCursorVisible;
+    }
+
+    void SetInventoryAnimationOpen(bool isOpen)
+    {
+        if (inventoryArmsAnimator == null || inventoryOpenBoolHash == 0)
+            return;
+
+        if (!HasAnimatorBoolParameter(inventoryArmsAnimator, inventoryOpenBoolHash))
+            return;
+
+        inventoryArmsAnimator.SetBool(inventoryOpenBoolHash, isOpen);
+    }
+
+    static bool HasAnimatorBoolParameter(Animator animator, int hash)
+    {
+        if (animator == null)
+            return false;
+
+        AnimatorControllerParameter[] parameters = animator.parameters;
+        for (int i = 0; i < parameters.Length; i++)
+        {
+            AnimatorControllerParameter parameter = parameters[i];
+            if (parameter.nameHash == hash && parameter.type == AnimatorControllerParameterType.Bool)
+                return true;
+        }
+
+        return false;
+    }
+
     void OnWeaponButtonClicked(int index)
     {
         EquipWeaponByIndex(index);
@@ -282,6 +711,7 @@ public class WeaponManager : MonoBehaviour
     {
         ActiveWeapon = weapon;
         ActiveWeaponIndex = index;
+        ApplyWeaponInventoryInputLock(ActiveWeapon, inventoryControlsLocked && disableShootingWhileInventoryOpen);
         ActiveWeaponChanged?.Invoke(ActiveWeapon);
     }
 

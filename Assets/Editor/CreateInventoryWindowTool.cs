@@ -1,211 +1,177 @@
 using System.IO;
-using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.UI;
+using UnityEngine.UIElements;
 
 public static class CreateInventoryWindowTool
 {
-    const string ButtonPrefabPath = "Assets/Prefabs/UI/WeaponButtonTMP.prefab";
+    const string UiFolderPath = "Assets/UI/Inventory";
+    const string PanelSettingsPath = UiFolderPath + "/InventoryPanelSettings.asset";
+    const string UxmlPath = UiFolderPath + "/InventoryWindow.uxml";
+    const string UssPath = UiFolderPath + "/InventoryWindow.uss";
 
-    [MenuItem("Tools/Prototype18/Create Inventory Window (TMP)")]
+    [MenuItem("Tools/Prototype18/Create Inventory Window (UI Toolkit)")]
     public static void CreateInventoryWindow()
     {
-        Canvas canvas = Object.FindObjectOfType<Canvas>();
-        if (canvas == null)
-        {
-            GameObject canvasGO = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-            canvas = canvasGO.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        EnsureAssetDirectories();
+        PanelSettings panelSettings = EnsurePanelSettingsAsset();
+        EnsureStyleSheetAsset();
+        VisualTreeAsset visualTreeAsset = EnsureVisualTreeAsset();
 
-            CanvasScaler scaler = canvasGO.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
-        }
-
-        EnsureEventSystemExists();
-
-        GameObject inventoryWindow = new GameObject("InventoryWindow", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        inventoryWindow.transform.SetParent(canvas.transform, false);
-
-        RectTransform windowRect = inventoryWindow.GetComponent<RectTransform>();
-        windowRect.anchorMin = new Vector2(0.5f, 0.5f);
-        windowRect.anchorMax = new Vector2(0.5f, 0.5f);
-        windowRect.pivot = new Vector2(0.5f, 0.5f);
-        windowRect.sizeDelta = new Vector2(640f, 500f);
-        windowRect.anchoredPosition = Vector2.zero;
-
-        Image windowImage = inventoryWindow.GetComponent<Image>();
-        windowImage.color = new Color(0.08f, 0.08f, 0.08f, 0.92f);
-
-        GameObject titleGO = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
-        titleGO.transform.SetParent(inventoryWindow.transform, false);
-        RectTransform titleRect = titleGO.GetComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0f, 1f);
-        titleRect.anchorMax = new Vector2(1f, 1f);
-        titleRect.pivot = new Vector2(0.5f, 1f);
-        titleRect.sizeDelta = new Vector2(-40f, 70f);
-        titleRect.anchoredPosition = new Vector2(0f, -20f);
-
-        TextMeshProUGUI titleText = titleGO.GetComponent<TextMeshProUGUI>();
-        titleText.text = "SELECT WEAPON";
-        titleText.fontSize = 36f;
-        titleText.alignment = TextAlignmentOptions.Center;
-        titleText.color = Color.white;
-
-        GameObject scrollView = CreateScrollView(inventoryWindow.transform);
-        Transform content = scrollView.transform.Find("Viewport/Content");
-
-        SetupContentLayout(content.GetComponent<RectTransform>());
-
-        Button buttonPrefab = EnsureButtonPrefab();
-
-        inventoryWindow.SetActive(false);
+        GameObject inventoryWindow = new GameObject("InventoryWindow", typeof(UIDocument));
+        UIDocument document = inventoryWindow.GetComponent<UIDocument>();
+        document.panelSettings = panelSettings;
+        document.visualTreeAsset = visualTreeAsset;
 
         WeaponManager weaponManager = Object.FindObjectOfType<WeaponManager>();
         if (weaponManager != null)
         {
             Undo.RecordObject(weaponManager, "Assign Inventory Window References");
-            weaponManager.inventoryWindow = inventoryWindow;
-            weaponManager.weaponButtonContainer = content;
-            weaponManager.weaponButtonPrefab = buttonPrefab;
+            weaponManager.inventoryDocument = document;
+            weaponManager.inventoryRootElementName = "inventory-window";
+            weaponManager.inventoryListElementName = "weapon-list";
+
+            weaponManager.inventoryWindow = null;
+            weaponManager.weaponButtonContainer = null;
+            weaponManager.weaponButtonPrefab = null;
             EditorUtility.SetDirty(weaponManager);
         }
 
         Selection.activeGameObject = inventoryWindow;
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-        Debug.Log("Inventory window created. References assigned to WeaponManager if one was found in scene.");
+        Debug.Log("UI Toolkit inventory window created. References assigned to WeaponManager if one was found in scene.");
     }
 
-    static void EnsureEventSystemExists()
+    static void EnsureAssetDirectories()
     {
-        EventSystem eventSystem = Object.FindObjectOfType<EventSystem>();
-        if (eventSystem != null)
-            return;
-
-        GameObject eventSystemGO = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
-        Undo.RegisterCreatedObjectUndo(eventSystemGO, "Create EventSystem");
+        Directory.CreateDirectory("Assets/UI");
+        Directory.CreateDirectory(UiFolderPath);
     }
 
-    static GameObject CreateScrollView(Transform parent)
+    static PanelSettings EnsurePanelSettingsAsset()
     {
-        GameObject scrollView = new GameObject("WeaponScroll", typeof(RectTransform), typeof(Image), typeof(Mask), typeof(ScrollRect));
-        scrollView.transform.SetParent(parent, false);
-
-        RectTransform scrollRect = scrollView.GetComponent<RectTransform>();
-        scrollRect.anchorMin = new Vector2(0f, 0f);
-        scrollRect.anchorMax = new Vector2(1f, 1f);
-        scrollRect.offsetMin = new Vector2(24f, 24f);
-        scrollRect.offsetMax = new Vector2(-24f, -90f);
-
-        Image scrollBg = scrollView.GetComponent<Image>();
-        scrollBg.color = new Color(0.14f, 0.14f, 0.14f, 0.95f);
-
-        Mask mask = scrollView.GetComponent<Mask>();
-        mask.showMaskGraphic = true;
-
-        GameObject viewport = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
-        viewport.transform.SetParent(scrollView.transform, false);
-
-        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
-        viewportRect.anchorMin = Vector2.zero;
-        viewportRect.anchorMax = Vector2.one;
-        viewportRect.offsetMin = Vector2.zero;
-        viewportRect.offsetMax = Vector2.zero;
-
-        Image viewportImage = viewport.GetComponent<Image>();
-        viewportImage.color = new Color(1f, 1f, 1f, 0.02f);
-
-        Mask viewportMask = viewport.GetComponent<Mask>();
-        viewportMask.showMaskGraphic = false;
-
-        GameObject content = new GameObject("Content", typeof(RectTransform));
-        content.transform.SetParent(viewport.transform, false);
-
-        RectTransform contentRect = content.GetComponent<RectTransform>();
-        contentRect.anchorMin = new Vector2(0f, 1f);
-        contentRect.anchorMax = new Vector2(1f, 1f);
-        contentRect.pivot = new Vector2(0.5f, 1f);
-        contentRect.anchoredPosition = Vector2.zero;
-        contentRect.sizeDelta = new Vector2(0f, 0f);
-
-        ScrollRect sr = scrollView.GetComponent<ScrollRect>();
-        sr.viewport = viewportRect;
-        sr.content = contentRect;
-        sr.horizontal = false;
-        sr.vertical = true;
-        sr.movementType = ScrollRect.MovementType.Clamped;
-        sr.scrollSensitivity = 24f;
-
-        return scrollView;
-    }
-
-    static void SetupContentLayout(RectTransform content)
-    {
-        VerticalLayoutGroup layout = content.gameObject.AddComponent<VerticalLayoutGroup>();
-        layout.spacing = 10f;
-        layout.padding = new RectOffset(12, 12, 12, 12);
-        layout.childAlignment = TextAnchor.UpperCenter;
-        layout.childControlHeight = true;
-        layout.childControlWidth = true;
-        layout.childForceExpandHeight = false;
-        layout.childForceExpandWidth = true;
-
-        ContentSizeFitter fitter = content.gameObject.AddComponent<ContentSizeFitter>();
-        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-    }
-
-    static Button EnsureButtonPrefab()
-    {
-        Directory.CreateDirectory("Assets/Prefabs");
-        Directory.CreateDirectory("Assets/Prefabs/UI");
-
-        Button existing = AssetDatabase.LoadAssetAtPath<Button>(ButtonPrefabPath);
+        PanelSettings existing = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
         if (existing != null)
             return existing;
 
-        GameObject root = new GameObject("WeaponButtonTMP", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
-        RectTransform rootRect = root.GetComponent<RectTransform>();
-        rootRect.sizeDelta = new Vector2(0f, 56f);
+        PanelSettings panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+        panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+        panelSettings.referenceResolution = new Vector2Int(1920, 1080);
 
-        Image rootImage = root.GetComponent<Image>();
-        rootImage.color = new Color(0.22f, 0.22f, 0.22f, 1f);
-
-        ColorBlock colors = root.GetComponent<Button>().colors;
-        colors.normalColor = new Color(0.22f, 0.22f, 0.22f, 1f);
-        colors.highlightedColor = new Color(0.32f, 0.32f, 0.32f, 1f);
-        colors.pressedColor = new Color(0.15f, 0.15f, 0.15f, 1f);
-        colors.selectedColor = colors.highlightedColor;
-        root.GetComponent<Button>().colors = colors;
-
-        LayoutElement layout = root.GetComponent<LayoutElement>();
-        layout.preferredHeight = 56f;
-
-        GameObject labelGO = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-        labelGO.transform.SetParent(root.transform, false);
-
-        RectTransform labelRect = labelGO.GetComponent<RectTransform>();
-        labelRect.anchorMin = Vector2.zero;
-        labelRect.anchorMax = Vector2.one;
-        labelRect.offsetMin = new Vector2(16f, 0f);
-        labelRect.offsetMax = new Vector2(-16f, 0f);
-
-        TextMeshProUGUI label = labelGO.GetComponent<TextMeshProUGUI>();
-        label.text = "Weapon";
-        label.fontSize = 28f;
-        label.alignment = TextAlignmentOptions.MidlineLeft;
-        label.color = Color.white;
-        label.raycastTarget = false;
-
-        GameObject prefabAsset = PrefabUtility.SaveAsPrefabAsset(root, ButtonPrefabPath);
-        Object.DestroyImmediate(root);
+        AssetDatabase.CreateAsset(panelSettings, PanelSettingsPath);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        return prefabAsset.GetComponent<Button>();
+        return panelSettings;
+    }
+
+    static void EnsureStyleSheetAsset()
+    {
+        if (File.Exists(UssPath))
+            return;
+
+        File.WriteAllText(UssPath,
+@".inventory-window {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    display: none;
+}
+
+.inventory-backdrop {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.55);
+}
+
+.inventory-card {
+    width: 640px;
+    max-height: 80%;
+    background-color: rgba(18, 18, 18, 0.95);
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+.inventory-title {
+    font-size: 30px;
+    color: rgb(245, 245, 245);
+    unity-text-align: middle-center;
+    margin-bottom: 14px;
+}
+
+.weapon-list {
+    flex-grow: 1;
+}
+
+.weapon-list .unity-scroll-view__content-container {
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    gap: 10px;
+}
+
+.weapon-button {
+    height: 50px;
+    font-size: 20px;
+    color: rgb(245, 245, 245);
+    unity-text-align: middle-left;
+    padding-left: 16px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    background-color: rgb(44, 44, 44);
+}
+
+.weapon-button:hover {
+    background-color: rgb(66, 66, 66);
+}
+
+.weapon-button:active {
+    background-color: rgb(30, 30, 30);
+}
+");
+
+        AssetDatabase.ImportAsset(UssPath, ImportAssetOptions.ForceSynchronousImport);
+    }
+
+    static VisualTreeAsset EnsureVisualTreeAsset()
+    {
+        VisualTreeAsset existing = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(UxmlPath);
+        if (existing != null)
+            return existing;
+
+        File.WriteAllText(UxmlPath,
+@"<ui:UXML xmlns:ui=""UnityEngine.UIElements"" xmlns:uie=""UnityEditor.UIElements"">
+    <ui:Style src=""InventoryWindow.uss"" />
+    <ui:VisualElement name=""inventory-window"" class=""inventory-window"">
+        <ui:VisualElement class=""inventory-backdrop"" />
+        <ui:VisualElement class=""inventory-card"">
+            <ui:Label text=""SELECT WEAPON"" class=""inventory-title"" />
+            <ui:ScrollView name=""weapon-list"" class=""weapon-list"" mode=""Vertical"" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>");
+
+        AssetDatabase.ImportAsset(UxmlPath, ImportAssetOptions.ForceSynchronousImport);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        return AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(UxmlPath);
     }
 }

@@ -219,6 +219,7 @@ public class WeaponHandler : MonoBehaviour
     bool isAiming;
     bool isSprinting;
     bool isMoving;
+    bool inventoryInputBlocked;
 
     public event Action<int, int> AmmoChanged;
     public event Action<WeaponHandler> FirePerformed;
@@ -230,6 +231,7 @@ public class WeaponHandler : MonoBehaviour
     public int ReserveAmmo => reserveAmmo;
     public int MagazineSize => magazineSize;
     public bool IsReloading => isReloading;
+    public bool IsInventoryInputBlocked => inventoryInputBlocked;
 
     void Awake()
     {
@@ -278,6 +280,9 @@ public class WeaponHandler : MonoBehaviour
 
     void Update()
     {
+        if (inventoryInputBlocked)
+            return;
+
         if (Input.GetKeyDown(reloadKey))
         {
             TryStartReload();
@@ -485,6 +490,11 @@ public class WeaponHandler : MonoBehaviour
     public void SetMoveState(bool moving)
     {
         isMoving = moving;
+    }
+
+    public void SetInventoryInputBlocked(bool blocked)
+    {
+        inventoryInputBlocked = blocked;
     }
 
     Vector3 GetSpreadDirection(Vector3 forward, Vector3 right, Vector3 up)
