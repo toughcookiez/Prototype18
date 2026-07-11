@@ -625,6 +625,9 @@ public class WeaponManager : MonoBehaviour
         {
             ApplyWeaponInventoryInputLock(ActiveWeapon, lockControls);
         }
+
+        if (playerController != null)
+            playerController.SetCrosshairVisible(!lockControls);
     }
 
     void RestoreWeaponHoldAfterInventoryClose()

@@ -1,8 +1,8 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
     <Style src="project://database/Assets/UI/Inventory/InventoryWindow.uss?fileID=7433441132597879392&amp;guid=d6e766d634cfaf04191220c3983b7767&amp;type=3#InventoryWindow"/>
-    <ui:VisualElement name="inventory-window" class="inventory-window" style="display: none;">
-        <ui:VisualElement class="inventory-backdrop"/>
-        <ui:VisualElement class="inventory-card">
+    <ui:VisualElement name="inventory-window" class="inventory-window" style="flex-shrink: 0; flex-grow: 1; display: flex; width: 400px; height: 400px; -unity-font-definition: url(&quot;project://database/Assets/UI/Fonts/Terminus/Terminus%20(TTF)%20Bold%20700.ttf?fileID=12800000&amp;guid=99bff00041c2d904fb5e7670ff7af08a&amp;type=3#Terminus (TTF) Bold 700&quot;);">
+        <ui:VisualElement class="inventory-backdrop" style="flex-shrink: 0; flex-grow: 1; background-color: rgba(0, 0, 0, 0);"/>
+        <ui:VisualElement class="inventory-card" style="width: auto; flex-shrink: 0; flex-grow: 1; background-color: rgba(44, 83, 55, 0.5); border-top-width: 2px; border-right-width: 2px; border-bottom-width: 2px; border-left-width: 2px; border-left-color: rgba(74, 228, 118, 0.75); border-right-color: rgba(74, 228, 118, 0.75); border-top-color: rgba(74, 228, 118, 0.75); border-bottom-color: rgba(74, 228, 118, 0.75);">
             <ui:Label text="SELECT WEAPON" class="inventory-title"/>
             <ui:ScrollView name="weapon-list" mode="Vertical" class="weapon-list"/>
         </ui:VisualElement>

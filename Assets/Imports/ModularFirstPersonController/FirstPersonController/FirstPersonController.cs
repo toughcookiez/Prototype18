@@ -349,6 +349,12 @@ public class FirstPersonController : MonoBehaviour
         }
     }
 
+    public void SetCrosshairVisible(bool visible)
+    {
+        if (crosshairObject != null)
+            crosshairObject.gameObject.SetActive(visible);
+    }
+
     void OnPlayerDeath()
     {
         // Disable player controls on death
