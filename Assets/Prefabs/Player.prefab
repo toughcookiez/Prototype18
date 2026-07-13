@@ -104,7 +104,6 @@ GameObject:
   - component: {fileID: 3881663661853784502}
   - component: {fileID: 2261021313224028000}
   - component: {fileID: 7661274227310223140}
-  - component: {fileID: 1495410083577252699}
   m_Layer: 0
   m_Name: background
   m_TagString: Untagged
@@ -184,28 +183,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &1495410083577252699
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1174092075369870104}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &2974871285812752951
 GameObject:
   m_ObjectHideFlags: 0
@@ -1527,15 +1504,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WeaponManager
   weapons:
-  - displayName: Five Seven
+  - displayName: Pistol
     prefab: {fileID: 4683482941374769606, guid: e9a49bc4af31f8b43a9321bac9c776a9, type: 3}
     localPosition: {x: 0.000233, y: 0.001602, z: 0.000243}
     localEulerAngles: {x: -93.539, y: -87.01801, z: 266.987}
     localScale: {x: 0.01, y: 0.01, z: 0.01}
+  - displayName: Shotgun
+    prefab: {fileID: 3249627288661055882, guid: 8363fec80dab07e45b8e5bbd592fc6c4, type: 3}
+    localPosition: {x: 0.000123, y: 0.002907, z: 0.000711}
+    localEulerAngles: {x: 85.999, y: 8.16, z: 8.256}
+    localScale: {x: 0.009999, y: 0.009999, z: 0.009999}
   weaponMount: {fileID: 6186456512595539566}
   startingWeaponIndex: 0
   weaponPrefabs:
   - {fileID: 4683482941374769606, guid: e9a49bc4af31f8b43a9321bac9c776a9, type: 3}
+  - {fileID: 3249627288661055882, guid: 8363fec80dab07e45b8e5bbd592fc6c4, type: 3}
   enableNumberKeySwitch: 1
   enableMouseWheelSwitch: 1
   blockSwitchWhileMenuOpen: 1

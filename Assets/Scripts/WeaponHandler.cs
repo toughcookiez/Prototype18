@@ -186,6 +186,9 @@ public class WeaponHandler : MonoBehaviour
     public float range = 100f;
     public LayerMask hitMask = ~0;
 
+    [Header("Shot Pattern")]
+    [Min(1)] public int raysPerShot = 1;
+
     [Header("Accuracy")]
     [Min(0f)] public float hipSpreadDegrees = 1.5f;
     [Min(0f)] public float aimSpreadDegrees = 0.25f;
@@ -220,6 +223,7 @@ public class WeaponHandler : MonoBehaviour
     bool isSprinting;
     bool isMoving;
     bool inventoryInputBlocked;
+    WeaponManager weaponManager;
 
     public event Action<int, int> AmmoChanged;
     public event Action<WeaponHandler> FirePerformed;
@@ -235,6 +239,7 @@ public class WeaponHandler : MonoBehaviour
 
     void Awake()
     {
+        weaponManager = GetComponentInParent<WeaponManager>();
         ClampAmmoValues();
         EnsureAnimatorBindings();
         NotifyAmmoChanged();
@@ -252,6 +257,7 @@ public class WeaponHandler : MonoBehaviour
         sprintSpreadDegrees = Mathf.Max(0f, sprintSpreadDegrees);
         movementSpreadBonusDegrees = Mathf.Max(0f, movementSpreadBonusDegrees);
         aimMoveSpeedMultiplier = Mathf.Clamp(aimMoveSpeedMultiplier, 0.1f, 1f);
+        raysPerShot = Mathf.Max(1, raysPerShot);
         EnsureAnimatorBindings();
     }
 
@@ -280,7 +286,7 @@ public class WeaponHandler : MonoBehaviour
 
     void Update()
     {
-        if (inventoryInputBlocked)
+        if (inventoryInputBlocked || IsBlockedByInventoryManager())
             return;
 
         if (Input.GetKeyDown(reloadKey))
@@ -390,23 +396,36 @@ public class WeaponHandler : MonoBehaviour
         FirePerformed?.Invoke(this);
 
         Vector3 origin;
-        Vector3 direction;
+        Vector3 forward;
+        Vector3 right;
+        Vector3 up;
 
         if (fpsCamera != null)
         {
             Ray cameraRay = fpsCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             origin = cameraRay.origin;
-            direction = GetSpreadDirection(cameraRay.direction, fpsCamera.transform.right, fpsCamera.transform.up);
+            forward = cameraRay.direction;
+            right = fpsCamera.transform.right;
+            up = fpsCamera.transform.up;
         }
         else
         {
             origin = muzzleTransform != null ? muzzleTransform.position : transform.position;
             Transform directionTransform = muzzleTransform != null ? muzzleTransform : transform;
-            direction = GetSpreadDirection(directionTransform.forward, directionTransform.right, directionTransform.up);
+            forward = directionTransform.forward;
+            right = directionTransform.right;
+            up = directionTransform.up;
         }
 
-        if (Physics.Raycast(origin, direction, out RaycastHit hit, range, hitMask, QueryTriggerInteraction.Collide))
+        int rayCount = Mathf.Max(1, raysPerShot);
+        bool hitEnemyThisShot = false;
+
+        for (int i = 0; i < rayCount; i++)
         {
+            Vector3 direction = GetSpreadDirection(forward, right, up);
+            if (!Physics.Raycast(origin, direction, out RaycastHit hit, range, hitMask, QueryTriggerInteraction.Collide))
+                continue;
+
             Enemy targetEnemy = null;
             EnemyBodyPart bodyPart = EnemyBodyPart.Unknown;
 
@@ -426,26 +445,24 @@ public class WeaponHandler : MonoBehaviour
                 float resolvedDamage = bodyPartDamage != null
                     ? bodyPartDamage.GetDamageFor(bodyPart)
                     : fallbackDamage;
+                float pelletDamage = resolvedDamage / rayCount;
 
-                targetEnemy.TakeDamage(new EnemyDamageInfo(resolvedDamage, bodyPart, hit.point));
-
-                if (hitFeedback != null)
-                    hitFeedback.PlayHitFeedback();
+                targetEnemy.TakeDamage(new EnemyDamageInfo(pelletDamage, bodyPart, hit.point));
+                hitEnemyThisShot = true;
             }
 
             if (hit.rigidbody != null)
                 hit.rigidbody.AddForce(-hit.normal * 50f, ForceMode.Impulse);
 
-            if (hitEffectPrefab != null)
+            if (hitEffectPrefab != null && targetEnemy == null)
             {
-                if (targetEnemy != null)
-                {
-                    return;
-                }
                 var go2 = Instantiate(hitEffectPrefab, hit.point, Quaternion.LookRotation(-hit.normal));
                 Destroy(go2, 5f);
             }
         }
+
+        if (hitEnemyThisShot && hitFeedback != null)
+            hitFeedback.PlayHitFeedback();
     }
 
     void TryPlayShootSound()
@@ -495,6 +512,14 @@ public class WeaponHandler : MonoBehaviour
     public void SetInventoryInputBlocked(bool blocked)
     {
         inventoryInputBlocked = blocked;
+    }
+
+    bool IsBlockedByInventoryManager()
+    {
+        if (weaponManager == null)
+            weaponManager = GetComponentInParent<WeaponManager>();
+
+        return weaponManager != null && weaponManager.IsShootingBlockedByInventory();
     }
 
     Vector3 GetSpreadDirection(Vector3 forward, Vector3 right, Vector3 up)

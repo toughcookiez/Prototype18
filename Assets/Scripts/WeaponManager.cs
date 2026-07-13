@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -77,6 +78,7 @@ public class WeaponManager : MonoBehaviour
     bool previousCursorVisible;
     VisualElement inventoryRootElement;
     VisualElement weaponListElement;
+    readonly List<UIToolkitButton> boundWeaponButtons = new List<UIToolkitButton>();
     int inventoryOpenBoolHash;
     Coroutine inventoryTransitionRoutine;
     bool isInventoryTransitioning;
@@ -132,6 +134,8 @@ public class WeaponManager : MonoBehaviour
 
     void OnDestroy()
     {
+        UnbindUIToolkitWeaponButtons();
+
         if (inventoryTransitionRoutine != null)
             StopCoroutine(inventoryTransitionRoutine);
 
@@ -393,20 +397,39 @@ public class WeaponManager : MonoBehaviour
 
     void BuildUIToolkitWeaponButtons()
     {
-        weaponListElement.Clear();
+        UnbindUIToolkitWeaponButtons();
+        boundWeaponButtons.AddRange(weaponListElement.Query<UIToolkitButton>().ToList());
 
-        for (int i = 0; i < weapons.Count; i++)
+        if (boundWeaponButtons.Count == 0)
         {
-            WeaponSpawnEntry entry = weapons[i];
-            if (entry == null || entry.prefab == null)
+            Debug.LogWarning("No UI Toolkit Button elements found under weapon-list to bind.", this);
+            return;
+        }
+
+        int bindCount = Mathf.Min(boundWeaponButtons.Count, weapons.Count);
+        for (int i = 0; i < bindCount; i++)
+        {
+            if (weapons[i] == null || weapons[i].prefab == null)
                 continue;
 
-            int capturedIndex = i;
-            UIToolkitButton button = new UIToolkitButton(() => OnWeaponButtonClicked(capturedIndex));
-            button.text = entry.GetLabel();
-            button.AddToClassList("weapon-button");
-            weaponListElement.Add(button);
+            boundWeaponButtons[i].RegisterCallback<ClickEvent>(OnDesignedWeaponButtonClicked);
         }
+
+        if (boundWeaponButtons.Count != weapons.Count)
+        {
+            Debug.LogWarning($"Weapon button count ({boundWeaponButtons.Count}) does not match weapon count ({weapons.Count}). Bound by index where available.", this);
+        }
+    }
+
+    void UnbindUIToolkitWeaponButtons()
+    {
+        for (int i = 0; i < boundWeaponButtons.Count; i++)
+        {
+            if (boundWeaponButtons[i] != null)
+                boundWeaponButtons[i].UnregisterCallback<ClickEvent>(OnDesignedWeaponButtonClicked);
+        }
+
+        boundWeaponButtons.Clear();
     }
 
     void ResolveInventoryElements()
@@ -457,6 +480,11 @@ public class WeaponManager : MonoBehaviour
         }
 
         return inventoryWindow != null && inventoryWindow.activeSelf;
+    }
+
+    public bool IsShootingBlockedByInventory()
+    {
+        return inventoryControlsLocked && disableShootingWhileInventoryOpen;
     }
 
     void SetInventoryVisible(bool isVisible)
@@ -708,6 +736,23 @@ public class WeaponManager : MonoBehaviour
 
         if (closeMenuAfterSelection)
             CloseInventoryWindow();
+    }
+
+    void OnDesignedWeaponButtonClicked(ClickEvent evt)
+    {
+        UIToolkitButton button = evt.currentTarget as UIToolkitButton;
+        if (button == null)
+            return;
+
+        int index = boundWeaponButtons.IndexOf(button);
+        if (index < 0 || index >= weapons.Count)
+            return;
+
+        WeaponSpawnEntry entry = weapons[index];
+        if (entry == null || entry.prefab == null)
+            return;
+
+        OnWeaponButtonClicked(index);
     }
 
     void SetActiveWeapon(WeaponHandler weapon, int index)
