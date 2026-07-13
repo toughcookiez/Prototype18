@@ -1,17 +1,17 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
     <Style src="project://database/Assets/UI/Inventory/InventoryWindow.uss?fileID=7433441132597879392&amp;guid=d6e766d634cfaf04191220c3983b7767&amp;type=3#InventoryWindow"/>
-    <ui:VisualElement name="inventory-window" class="inventory-window" style="flex-shrink: 0; flex-grow: 1; display: flex; width: 400px; height: 400px; -unity-font-definition: url(&quot;project://database/Assets/UI/Fonts/Terminus/Terminus%20(TTF)%20Bold%20700.ttf?fileID=12800000&amp;guid=99bff00041c2d904fb5e7670ff7af08a&amp;type=3#Terminus (TTF) Bold 700&quot;);">
+    <ui:VisualElement name="inventory-window" class="inventory-window" style="flex-shrink: 0; flex-grow: 1; display: flex; width: 400px; height: 364px; -unity-font-definition: url(&quot;project://database/Assets/UI/Fonts/Terminus/Terminus%20(TTF)%20Bold%20700.ttf?fileID=12800000&amp;guid=99bff00041c2d904fb5e7670ff7af08a&amp;type=3#Terminus (TTF) Bold 700&quot;);">
         <ui:VisualElement class="inventory-backdrop" style="flex-shrink: 0; flex-grow: 1; background-color: rgba(0, 0, 0, 0);"/>
-        <ui:VisualElement class="inventory-card" style="width: 500px; flex-shrink: 0; flex-grow: 1; background-color: rgba(44, 83, 55, 0.5); border-top-width: 2px; border-right-width: 2px; border-bottom-width: 2px; border-left-width: 2px; border-left-color: rgba(74, 228, 118, 0.75); border-right-color: rgba(74, 228, 118, 0.75); border-top-color: rgba(74, 228, 118, 0.75); border-bottom-color: rgba(74, 228, 118, 0.75);">
+        <ui:VisualElement class="inventory-card" style="width: 500px; flex-shrink: 0; flex-grow: 1; background-color: rgba(44, 83, 55, 0.5); border-top-width: 2px; border-right-width: 2px; border-bottom-width: 2px; border-left-width: 2px; border-left-color: rgba(74, 228, 118, 0.75); border-right-color: rgba(74, 228, 118, 0.75); border-top-color: rgba(74, 228, 118, 0.75); border-bottom-color: rgba(74, 228, 118, 0.75); max-height: 100%;">
             <ui:TabView>
                 <ui:Tab label="Weapons">
                     <ui:Label text="SELECT WEAPON" name="Label" class="inventory-title" style="display: none;"/>
-                    <ui:ScrollView name="weapon-list" mode="Horizontal" class="weapon-list" style="margin-top: 20px; flex-direction: column;">
+                    <ui:ScrollView name="weapon-list" mode="Vertical" vertical-scroller-visibility="Hidden" class="weapon-list" style="margin-top: 5px; flex-direction: column;">
                         <ui:Button text="" icon-image="" style="width: 100px; height: 52px; padding-top: 3px; padding-bottom: 3px; padding-right: 3px; padding-left: 3px;">
                             <ui:VisualElement style="flex-grow: 1; background-image: url(&quot;project://database/Assets/Textures/Icons/Five_Seven_Icon.png?fileID=2800000&amp;guid=1db4fdd55baeac14c8868c12842ca2d0&amp;type=3#Five_Seven_Icon&quot;); width: 56px; left: 19px; flex-wrap: nowrap; -unity-text-align: middle-center; -unity-background-scale-mode: scale-and-crop; height: 21px; top: -4px;"/>
                         </ui:Button>
                         <ui:Button text="" icon-image="" style="width: 100px; height: 52px; padding-top: 3px; padding-bottom: 3px; padding-right: 3px; padding-left: 3px;">
-                            <ui:VisualElement style="flex-grow: 1; background-image: none; width: 56px; left: 19px; flex-wrap: nowrap; -unity-text-align: middle-center; -unity-background-scale-mode: scale-and-crop; height: 21px; top: -4px;"/>
+                            <ui:VisualElement style="flex-grow: 1; background-image: url(&quot;project://database/Assets/Textures/Icons/Bennelli_M4_Icon.png?fileID=2800000&amp;guid=b2962ed7ff13dcd46bb50ac8344f42b0&amp;type=3#Bennelli_M4_Icon&quot;); width: 100px; left: -4px; flex-wrap: nowrap; -unity-text-align: middle-center; -unity-background-scale-mode: scale-and-crop; height: 38px; top: -1px; flex-shrink: 0;"/>
                         </ui:Button>
                     </ui:ScrollView>
                 </ui:Tab>

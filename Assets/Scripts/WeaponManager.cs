@@ -180,6 +180,7 @@ public class WeaponManager : MonoBehaviour
         newWeapon.transform.localScale = entry.localScale;
 
         SetActiveWeapon(newWeapon, index);
+        newWeapon.NotifyEquipped();
         return true;
     }
 

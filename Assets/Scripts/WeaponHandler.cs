@@ -196,6 +196,9 @@ public class WeaponHandler : MonoBehaviour
     [Min(0f)] public float movementSpreadBonusDegrees = 0.75f;
     [Range(0.1f, 1f)] public float aimMoveSpeedMultiplier = 0.8f;
 
+    [Header("Equip Lock")]
+    [Min(0f)] public float equipLockDuration = 0.6f;
+
     [Header("Animation")]
     public WeaponAnimatorBindings animatorBindings = new WeaponAnimatorBindings();
 
@@ -219,6 +222,8 @@ public class WeaponHandler : MonoBehaviour
     float lastEmptyAmmoSoundTime = -999f;
     bool isReloading;
     Coroutine reloadRoutine;
+    bool isEquipping;
+    Coroutine equipLockRoutine;
     bool isAiming;
     bool isSprinting;
     bool isMoving;
@@ -274,6 +279,32 @@ public class WeaponHandler : MonoBehaviour
             isReloading = false;
             ReloadCanceled?.Invoke(this);
         }
+
+        if (equipLockRoutine != null)
+        {
+            StopCoroutine(equipLockRoutine);
+            equipLockRoutine = null;
+        }
+        isEquipping = false;
+    }
+
+    public void NotifyEquipped()
+    {
+        if (equipLockDuration <= 0f)
+            return;
+
+        if (equipLockRoutine != null)
+            StopCoroutine(equipLockRoutine);
+
+        equipLockRoutine = StartCoroutine(EquipLockRoutine());
+    }
+
+    IEnumerator EquipLockRoutine()
+    {
+        isEquipping = true;
+        yield return new WaitForSeconds(equipLockDuration);
+        isEquipping = false;
+        equipLockRoutine = null;
     }
 
     private void Start()
@@ -287,6 +318,9 @@ public class WeaponHandler : MonoBehaviour
     void Update()
     {
         if (inventoryInputBlocked || IsBlockedByInventoryManager())
+            return;
+
+        if (isEquipping)
             return;
 
         if (Input.GetKeyDown(reloadKey))

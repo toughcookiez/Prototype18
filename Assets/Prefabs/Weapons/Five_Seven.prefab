@@ -150,24 +150,26 @@ MonoBehaviour:
   weaponAnimator: {fileID: 3981753588305490673}
   fireMode: 0
   fireRate: 3
-  fallbackDamage: 5
+  fallbackDamage: 4
   bodyPartDamage:
-    defaultDamage: 5
-    headDamage: 8
-    chestDamage: 5
-    stomachDamage: 4
-    leftArmDamage: 4
-    rightArmDamage: 4
-    legsDamage: 3
+    defaultDamage: 4
+    headDamage: 5
+    chestDamage: 4
+    stomachDamage: 3
+    leftArmDamage: 3
+    rightArmDamage: 3
+    legsDamage: 2
   range: 100
   hitMask:
     serializedVersion: 2
     m_Bits: 55
+  raysPerShot: 1
   hipSpreadDegrees: 1.5
   aimSpreadDegrees: 0.25
   sprintSpreadDegrees: 3
   movementSpreadBonusDegrees: 0.75
   aimMoveSpeedMultiplier: 0.45
+  equipLockDuration: 0.8
   animatorBindings:
     holdTriggerParam: FiveSeven_Hold
     fireTriggerParam: FiveSeven_Fire
