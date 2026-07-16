@@ -593,7 +593,7 @@ MonoBehaviour:
   startingWeaponIndex: 0
   weaponPrefabs:
   - {fileID: 4683482941374769606, guid: e9a49bc4af31f8b43a9321bac9c776a9, type: 3}
-  enableNumberKeySwitch: 1
+  enableNumberKeySwitch: 0
   enableMouseWheelSwitch: 1
   blockSwitchWhileMenuOpen: 1
   inventoryKey: 105

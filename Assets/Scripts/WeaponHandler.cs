@@ -70,7 +70,6 @@ public class WeaponHandler : MonoBehaviour
         public string fireTriggerParam = "Fire";
         public string aimFireTriggerParam;
         public string reloadStartTriggerParam = "ReloadStart";
-        public string reloadCompleteTriggerParam = "ReloadComplete";
         public string aimBoolParam;
         public string sprintBoolParam;
 
@@ -78,7 +77,6 @@ public class WeaponHandler : MonoBehaviour
         [NonSerialized] int fireTriggerHash;
         [NonSerialized] int aimFireTriggerHash;
         [NonSerialized] int reloadStartTriggerHash;
-        [NonSerialized] int reloadCompleteTriggerHash;
         [NonSerialized] int aimBoolHash;
         [NonSerialized] int sprintBoolHash;
         [NonSerialized] bool hashesCached;
@@ -119,15 +117,6 @@ public class WeaponHandler : MonoBehaviour
             }
         }
 
-        public int ReloadCompleteTriggerHash
-        {
-            get
-            {
-                EnsureHashesCached();
-                return reloadCompleteTriggerHash;
-            }
-        }
-
         public int AimBoolHash
         {
             get
@@ -152,7 +141,6 @@ public class WeaponHandler : MonoBehaviour
             fireTriggerHash = GetParamHash(fireTriggerParam);
             aimFireTriggerHash = GetParamHash(aimFireTriggerParam);
             reloadStartTriggerHash = GetParamHash(reloadStartTriggerParam);
-            reloadCompleteTriggerHash = GetParamHash(reloadCompleteTriggerParam);
             aimBoolHash = GetParamHash(aimBoolParam);
             sprintBoolHash = GetParamHash(sprintBoolParam);
             hashesCached = true;
@@ -196,6 +184,39 @@ public class WeaponHandler : MonoBehaviour
     [Min(0f)] public float movementSpreadBonusDegrees = 0.75f;
     [Range(0.1f, 1f)] public float aimMoveSpeedMultiplier = 0.8f;
 
+    [Header("Spray Pattern")]
+    public bool useSprayPattern = false;
+    [Range(0f, 1f)] public float sprayPatternInfluence = 0.75f;
+    [Range(0f, 1f)] public float sprayPatternAimMultiplier = 0.55f;
+    [Min(0f)] public float sprayPatternStrength = 1f;
+    [Min(0f)] public float sprayPatternResetDelay = 0.15f;
+    [Range(0f, 1f)] public float multiRayRandomScaleWhenSprayPatternEnabled = 0.35f;
+    [Range(0.4f, 1f)] public float viewPunchScale = 0.7f;
+    [Range(0.7f, 0.95f)] public float viewPunchDamping = 0.87f; // Higher = slower decay
+    public Vector2[] sprayPatternOffsets =
+    {
+        new Vector2(0f, 0.06f),
+        new Vector2(0.01f, 0.12f),
+        new Vector2(0.01f, 0.18f),
+        new Vector2(0.02f, 0.24f),
+        new Vector2(0.02f, 0.30f),
+        new Vector2(0.02f, 0.36f),
+        new Vector2(0.03f, 0.42f),
+        new Vector2(0.03f, 0.48f),
+        new Vector2(0.03f, 0.54f),
+        new Vector2(0.04f, 0.60f),
+        new Vector2(-0.05f, 0.66f),
+        new Vector2(0.06f, 0.72f),
+        new Vector2(-0.05f, 0.78f),
+        new Vector2(0.06f, 0.84f),
+        new Vector2(-0.05f, 0.90f),
+        new Vector2(0.06f, 0.96f),
+        new Vector2(-0.06f, 1.02f),
+        new Vector2(0.07f, 1.08f),
+        new Vector2(-0.07f, 1.14f),
+        new Vector2(0.08f, 1.20f)
+    };
+
     [Header("Equip Lock")]
     [Min(0f)] public float equipLockDuration = 0.6f;
 
@@ -229,6 +250,10 @@ public class WeaponHandler : MonoBehaviour
     bool isMoving;
     bool inventoryInputBlocked;
     WeaponManager weaponManager;
+    int sprayPatternIndex;
+    float lastSprayShotTime = -999f;
+    Coroutine viewPunchRoutine;
+    Vector3 currentViewPunchRotation = Vector3.zero; // Accumulated punch that decays
 
     public event Action<int, int> AmmoChanged;
     public event Action<WeaponHandler> FirePerformed;
@@ -241,6 +266,8 @@ public class WeaponHandler : MonoBehaviour
     public int MagazineSize => magazineSize;
     public bool IsReloading => isReloading;
     public bool IsInventoryInputBlocked => inventoryInputBlocked;
+    public bool IsAimingForAnimation => isAiming;
+    public bool IsSprintingForAnimation => isSprinting;
 
     void Awake()
     {
@@ -262,6 +289,13 @@ public class WeaponHandler : MonoBehaviour
         sprintSpreadDegrees = Mathf.Max(0f, sprintSpreadDegrees);
         movementSpreadBonusDegrees = Mathf.Max(0f, movementSpreadBonusDegrees);
         aimMoveSpeedMultiplier = Mathf.Clamp(aimMoveSpeedMultiplier, 0.1f, 1f);
+        sprayPatternInfluence = Mathf.Clamp01(sprayPatternInfluence);
+        sprayPatternAimMultiplier = Mathf.Clamp01(sprayPatternAimMultiplier);
+        sprayPatternStrength = Mathf.Max(0f, sprayPatternStrength);
+        sprayPatternResetDelay = Mathf.Max(0f, sprayPatternResetDelay);
+        multiRayRandomScaleWhenSprayPatternEnabled = Mathf.Clamp01(multiRayRandomScaleWhenSprayPatternEnabled);
+        viewPunchScale = Mathf.Clamp(viewPunchScale, 0.4f, 1f);
+        viewPunchDamping = Mathf.Clamp(viewPunchDamping, 0.7f, 0.95f);
         raysPerShot = Mathf.Max(1, raysPerShot);
         EnsureAnimatorBindings();
     }
@@ -286,10 +320,13 @@ public class WeaponHandler : MonoBehaviour
             equipLockRoutine = null;
         }
         isEquipping = false;
+        ResetSprayPatternState();
     }
 
     public void NotifyEquipped()
     {
+        ResetSprayPatternState();
+
         if (equipLockDuration <= 0f)
             return;
 
@@ -365,6 +402,8 @@ public class WeaponHandler : MonoBehaviour
 
         if (reserveAmmo <= 0)
             return false;
+
+        ResetSprayPatternState();
 
         reloadRoutine = StartCoroutine(ReloadAfterDelay());
         ReloadStarted?.Invoke(this);
@@ -453,10 +492,29 @@ public class WeaponHandler : MonoBehaviour
 
         int rayCount = Mathf.Max(1, raysPerShot);
         bool hitEnemyThisShot = false;
+        float spreadDegrees = GetCurrentSpreadDegrees();
+        float spreadRadius = spreadDegrees <= 0f ? 0f : Mathf.Tan(spreadDegrees * Mathf.Deg2Rad);
+        bool sprayEnabled = useSprayPattern && spreadRadius > 0f;
+        Vector2 sprayOffset = sprayEnabled ? GetSprayPatternOffset(spreadRadius) : Vector2.zero;
+        float randomSpreadScale = sprayEnabled ? Mathf.Clamp01(1f - sprayPatternInfluence) : 1f;
+        
+        if (sprayEnabled && spreadRadius > 0f)
+        {
+            ApplyViewPunch(sprayOffset, spreadRadius);
+        }
 
         for (int i = 0; i < rayCount; i++)
         {
-            Vector3 direction = GetSpreadDirection(forward, right, up);
+            Vector2 randomOffset = spreadRadius > 0f
+                ? UnityEngine.Random.insideUnitCircle * spreadRadius * randomSpreadScale
+                : Vector2.zero;
+
+            if (sprayEnabled && rayCount > 1)
+            {
+                randomOffset += UnityEngine.Random.insideUnitCircle * spreadRadius * multiRayRandomScaleWhenSprayPatternEnabled;
+            }
+
+            Vector3 direction = GetSpreadDirection(forward, right, up, sprayOffset + randomOffset);
             if (!Physics.Raycast(origin, direction, out RaycastHit hit, range, hitMask, QueryTriggerInteraction.Collide))
                 continue;
 
@@ -556,15 +614,12 @@ public class WeaponHandler : MonoBehaviour
         return weaponManager != null && weaponManager.IsShootingBlockedByInventory();
     }
 
-    Vector3 GetSpreadDirection(Vector3 forward, Vector3 right, Vector3 up)
+    Vector3 GetSpreadDirection(Vector3 forward, Vector3 right, Vector3 up, Vector2 spreadOffset)
     {
-        float spreadDegrees = GetCurrentSpreadDegrees();
-        if (spreadDegrees <= 0f)
+        if (spreadOffset.sqrMagnitude <= Mathf.Epsilon)
             return forward.normalized;
 
-        float spreadRadius = Mathf.Tan(spreadDegrees * Mathf.Deg2Rad);
-        Vector2 offset = UnityEngine.Random.insideUnitCircle * spreadRadius;
-        return (forward + right * offset.x + up * offset.y).normalized;
+        return (forward + right * spreadOffset.x + up * spreadOffset.y).normalized;
     }
 
     float GetCurrentSpreadDegrees()
@@ -576,6 +631,74 @@ public class WeaponHandler : MonoBehaviour
         }
 
         return Mathf.Max(0f, spread);
+    }
+
+    Vector2 GetSprayPatternOffset(float spreadRadius)
+    {
+        if (sprayPatternOffsets == null || sprayPatternOffsets.Length == 0)
+            return Vector2.zero;
+
+        if (Time.time - lastSprayShotTime > sprayPatternResetDelay)
+        {
+            sprayPatternIndex = 0;
+        }
+
+        int index = sprayPatternIndex % sprayPatternOffsets.Length;
+        sprayPatternIndex++;
+        lastSprayShotTime = Time.time;
+
+        float aimMultiplier = isAiming ? sprayPatternAimMultiplier : 1f;
+        return sprayPatternOffsets[index] * spreadRadius * sprayPatternStrength * aimMultiplier;
+    }
+
+    void ResetSprayPatternState()
+    {
+        sprayPatternIndex = 0;
+        lastSprayShotTime = -999f;
+    }
+
+    void ApplyViewPunch(Vector2 sprayOffset, float spreadRadius)
+    {
+        if (sprayOffset.sqrMagnitude <= Mathf.Epsilon || fpsCamera == null)
+            return;
+
+        Vector2 punch = sprayOffset * viewPunchScale;
+        float punchDegreesPerUnit = 25f;
+        
+        Vector3 newPunch = new Vector3(
+            -punch.y * punchDegreesPerUnit,
+            punch.x * punchDegreesPerUnit,
+            0f
+        );
+        
+        currentViewPunchRotation += newPunch; // ADD to existing punch instead of replacing
+        
+        if (viewPunchRoutine != null)
+            StopCoroutine(viewPunchRoutine);
+        
+        viewPunchRoutine = StartCoroutine(ApplyViewPunchDecay());
+    }
+
+    IEnumerator ApplyViewPunchDecay()
+    {
+        if (fpsCamera == null)
+            yield break;
+
+        Quaternion baseRotation = fpsCamera.transform.localRotation;
+        
+        while (currentViewPunchRotation.sqrMagnitude > 0.001f) // Stop when punch is nearly zero
+        {
+            fpsCamera.transform.localRotation = baseRotation * Quaternion.Euler(currentViewPunchRotation);
+            
+            // Exponential decay: multiply by damping factor each frame
+            currentViewPunchRotation *= viewPunchDamping;
+            
+            yield return null;
+        }
+        
+        currentViewPunchRotation = Vector3.zero;
+        fpsCamera.transform.localRotation = baseRotation;
+        viewPunchRoutine = null;
     }
 
     void EnsureAnimatorBindings()

@@ -12,6 +12,7 @@ public class PlayerArmsAnimatorBridge : MonoBehaviour
     WeaponHandler activeWeapon;
     Animator activeGunAnimator;
     bool currentAimState;
+    bool currentSprintState;
 
     void Awake()
     {
@@ -43,6 +44,7 @@ public class PlayerArmsAnimatorBridge : MonoBehaviour
         activeWeapon = null;
         activeGunAnimator = null;
         currentAimState = false;
+        currentSprintState = false;
     }
 
     public void SetAimState(bool isAiming)
@@ -53,14 +55,18 @@ public class PlayerArmsAnimatorBridge : MonoBehaviour
             return;
 
         TrySetBool(activeWeapon.animatorBindings.AimBoolHash, activeWeapon.animatorBindings.aimBoolParam, isAiming);
+        TrySetGunBool(activeWeapon.animatorBindings.AimBoolHash, activeWeapon.animatorBindings.aimBoolParam, isAiming);
     }
 
     public void SetSprintState(bool isSprinting)
     {
+        currentSprintState = isSprinting;
+
         if (activeWeapon == null)
             return;
 
         TrySetBool(activeWeapon.animatorBindings.SprintBoolHash, activeWeapon.animatorBindings.sprintBoolParam, isSprinting);
+        TrySetGunBool(activeWeapon.animatorBindings.SprintBoolHash, activeWeapon.animatorBindings.sprintBoolParam, isSprinting);
     }
 
     public void ForceHoldCurrentWeapon()
@@ -77,6 +83,15 @@ public class PlayerArmsAnimatorBridge : MonoBehaviour
         activeWeapon = weapon;
         activeGunAnimator = ResolveGunAnimator(activeWeapon);
         AttachWeaponEvents(activeWeapon);
+
+        if (activeWeapon != null)
+        {
+            activeWeapon.SetAimState(currentAimState);
+            activeWeapon.SetSprintState(currentSprintState);
+        }
+
+        SetAimState(currentAimState);
+        SetSprintState(currentSprintState);
         ApplyHoldAnimation(activeWeapon);
     }
 
@@ -119,13 +134,15 @@ public class PlayerArmsAnimatorBridge : MonoBehaviour
         int fireTriggerHash = weapon.animatorBindings.FireTriggerHash;
         string fireTriggerParam = weapon.animatorBindings.fireTriggerParam;
 
-        if (currentAimState && weapon.animatorBindings.AimFireTriggerHash != 0)
+        bool useAimFire = weapon.IsAimingForAnimation && !weapon.IsSprintingForAnimation;
+        if (useAimFire && weapon.animatorBindings.AimFireTriggerHash != 0)
         {
             fireTriggerHash = weapon.animatorBindings.AimFireTriggerHash;
             fireTriggerParam = weapon.animatorBindings.aimFireTriggerParam;
         }
 
         TrySetTrigger(fireTriggerHash, fireTriggerParam);
+        TrySetGunTrigger(fireTriggerHash, fireTriggerParam);
     }
 
     void OnWeaponReloadStarted(WeaponHandler weapon)
@@ -142,8 +159,9 @@ public class PlayerArmsAnimatorBridge : MonoBehaviour
         if (weapon != activeWeapon)
             return;
 
-        TrySetTrigger(weapon.animatorBindings.ReloadCompleteTriggerHash, weapon.animatorBindings.reloadCompleteTriggerParam);
-        TrySetGunTrigger(weapon.animatorBindings.ReloadCompleteTriggerHash, weapon.animatorBindings.reloadCompleteTriggerParam);
+        // Clear any pending reload-start trigger state without forcing hold/equip transitions.
+        TryResetTrigger(armsAnimator, weapon.animatorBindings.ReloadStartTriggerHash);
+        TryResetTrigger(activeGunAnimator, weapon.animatorBindings.ReloadStartTriggerHash);
     }
 
     void OnWeaponReloadCanceled(WeaponHandler weapon)
@@ -152,9 +170,7 @@ public class PlayerArmsAnimatorBridge : MonoBehaviour
             return;
 
         TryResetTrigger(armsAnimator, weapon.animatorBindings.ReloadStartTriggerHash);
-        TryResetTrigger(armsAnimator, weapon.animatorBindings.ReloadCompleteTriggerHash);
         TryResetTrigger(activeGunAnimator, weapon.animatorBindings.ReloadStartTriggerHash);
-        TryResetTrigger(activeGunAnimator, weapon.animatorBindings.ReloadCompleteTriggerHash);
 
         // Default fallback: return both rigs to hold pose if a reload is canceled (e.g., weapon switch).
         TrySetTrigger(weapon.animatorBindings.HoldTriggerHash, weapon.animatorBindings.holdTriggerParam);
@@ -227,6 +243,23 @@ public class PlayerArmsAnimatorBridge : MonoBehaviour
         }
 
         activeGunAnimator.SetTrigger(hash);
+    }
+
+    void TrySetGunBool(int hash, string paramName, bool value)
+    {
+        if (activeGunAnimator == null)
+            return;
+
+        if (hash == 0)
+            return;
+
+        if (!HasParameter(activeGunAnimator, hash, AnimatorControllerParameterType.Bool))
+        {
+            Warn($"Missing bool parameter '{paramName}' on gun animator '{activeGunAnimator.runtimeAnimatorController?.name}'.");
+            return;
+        }
+
+        activeGunAnimator.SetBool(hash, value);
     }
 
     static void TryResetTrigger(Animator animator, int hash)

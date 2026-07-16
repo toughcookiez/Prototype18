@@ -38,7 +38,7 @@ public class WeaponManager : MonoBehaviour
     public List<WeaponHandler> weaponPrefabs = new List<WeaponHandler>();
 
     [Header("Switch Input")]
-    public bool enableNumberKeySwitch = true;
+    public bool enableNumberKeySwitch = false;
     public bool enableMouseWheelSwitch = true;
     public bool blockSwitchWhileMenuOpen = true;
 

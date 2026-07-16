@@ -16,6 +16,7 @@ public class HitCrosshairFeedback : MonoBehaviour
     public float totalDisplayDuration = 0.45f;
 
     private Coroutine pulseCoroutine;
+    private Vector3 cachedOriginalScale;
 
     private void Start()
     {
@@ -34,6 +35,10 @@ public class HitCrosshairFeedback : MonoBehaviour
             // Initially invisible
             hitFeedbackImage.color = new Color(hitFeedbackColor.r, hitFeedbackColor.g, hitFeedbackColor.b, 0f);
         }
+
+        cachedOriginalScale = hitFeedbackImage != null
+            ? hitFeedbackImage.GetComponent<RectTransform>().localScale
+            : Vector3.one;
     }
 
     /// <summary>
@@ -54,7 +59,8 @@ public class HitCrosshairFeedback : MonoBehaviour
             yield break;
 
         RectTransform rectTransform = hitFeedbackImage.GetComponent<RectTransform>();
-        Vector3 originalScale = rectTransform.localScale;
+        rectTransform.localScale = cachedOriginalScale;
+        Vector3 originalScale = cachedOriginalScale;
         Vector3 targetScale = originalScale * pulseScaleMax;
 
         // Pulse out phase (scale up + appear)

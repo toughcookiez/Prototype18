@@ -13,6 +13,9 @@
                         <ui:Button text="" icon-image="" style="width: 100px; height: 52px; padding-top: 3px; padding-bottom: 3px; padding-right: 3px; padding-left: 3px;">
                             <ui:VisualElement style="flex-grow: 1; background-image: url(&quot;project://database/Assets/Textures/Icons/Bennelli_M4_Icon.png?fileID=2800000&amp;guid=b2962ed7ff13dcd46bb50ac8344f42b0&amp;type=3#Bennelli_M4_Icon&quot;); width: 100px; left: -4px; flex-wrap: nowrap; -unity-text-align: middle-center; -unity-background-scale-mode: scale-and-crop; height: 38px; top: -1px; flex-shrink: 0;"/>
                         </ui:Button>
+                        <ui:Button text="" icon-image="" style="width: 100px; height: 52px; padding-top: 3px; padding-bottom: 3px; padding-right: 3px; padding-left: 3px;">
+                            <ui:VisualElement style="flex-grow: 1; background-image: none; width: 100px; left: -4px; flex-wrap: nowrap; -unity-text-align: middle-center; -unity-background-scale-mode: scale-and-crop; height: 38px; top: -1px; flex-shrink: 0;"/>
+                        </ui:Button>
                     </ui:ScrollView>
                 </ui:Tab>
                 <ui:Tab label="utilities">
