@@ -1519,6 +1519,11 @@ MonoBehaviour:
     localPosition: {x: 0.00024, y: 0.00112, z: 0.00048}
     localEulerAngles: {x: -81.076, y: -33.972, z: 217.567}
     localScale: {x: 0.007999998, y: 0.007999998, z: 0.007999998}
+  - displayName: AR
+    prefab: {fileID: 1153275220792834710, guid: bae0dd62d2a94594b9740013c081a84e, type: 3}
+    localPosition: {x: 0.000202, y: 0.001305, z: 0.000659}
+    localEulerAngles: {x: -83.956, y: -15.584, z: 188.203}
+    localScale: {x: 0.009999, y: 0.009999, z: 0.009999}
   weaponMount: {fileID: 6186456512595539566}
   startingWeaponIndex: 0
   weaponPrefabs:
@@ -1526,7 +1531,7 @@ MonoBehaviour:
   - {fileID: 3249627288661055882, guid: 8363fec80dab07e45b8e5bbd592fc6c4, type: 3}
   - {fileID: 3314994501490974912, guid: 4061e27489bdf38469354224fa32ed3a, type: 3}
   enableNumberKeySwitch: 0
-  enableMouseWheelSwitch: 1
+  enableMouseWheelSwitch: 0
   blockSwitchWhileMenuOpen: 1
   inventoryKey: 105
   inventoryDocument: {fileID: 3213515873105637468}
