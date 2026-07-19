@@ -184,6 +184,10 @@ public class WeaponHandler : MonoBehaviour
     [Min(0f)] public float movementSpreadBonusDegrees = 0.75f;
     [Range(0.1f, 1f)] public float aimMoveSpeedMultiplier = 0.8f;
 
+    [Header("Aiming")]
+    public bool canAim = true;
+    [Min(0.1f)] public float aimZoomFOV = 30f;
+
     [Header("Spray Pattern")]
     public bool useSprayPattern = false;
     [Range(0f, 1f)] public float sprayPatternInfluence = 0.75f;
@@ -268,6 +272,8 @@ public class WeaponHandler : MonoBehaviour
     public bool IsInventoryInputBlocked => inventoryInputBlocked;
     public bool IsAimingForAnimation => isAiming;
     public bool IsSprintingForAnimation => isSprinting;
+    public bool CanAim => canAim;
+    public float AimZoomFOV => aimZoomFOV;
 
     void Awake()
     {
@@ -289,6 +295,7 @@ public class WeaponHandler : MonoBehaviour
         sprintSpreadDegrees = Mathf.Max(0f, sprintSpreadDegrees);
         movementSpreadBonusDegrees = Mathf.Max(0f, movementSpreadBonusDegrees);
         aimMoveSpeedMultiplier = Mathf.Clamp(aimMoveSpeedMultiplier, 0.1f, 1f);
+        aimZoomFOV = Mathf.Max(0.1f, aimZoomFOV);
         sprayPatternInfluence = Mathf.Clamp01(sprayPatternInfluence);
         sprayPatternAimMultiplier = Mathf.Clamp01(sprayPatternAimMultiplier);
         sprayPatternStrength = Mathf.Max(0f, sprayPatternStrength);
@@ -588,7 +595,7 @@ public class WeaponHandler : MonoBehaviour
 
     public void SetAimState(bool aiming)
     {
-        isAiming = aiming;
+        isAiming = canAim && aiming;
     }
 
     public void SetSprintState(bool sprinting)

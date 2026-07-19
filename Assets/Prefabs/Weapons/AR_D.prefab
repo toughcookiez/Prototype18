@@ -716,6 +716,8 @@ MonoBehaviour:
   sprintSpreadDegrees: 4
   movementSpreadBonusDegrees: 0.75
   aimMoveSpeedMultiplier: 0.8
+  canAim: 0
+  aimZoomFOV: 30
   useSprayPattern: 1
   sprayPatternInfluence: 0.8
   sprayPatternAimMultiplier: 0.55

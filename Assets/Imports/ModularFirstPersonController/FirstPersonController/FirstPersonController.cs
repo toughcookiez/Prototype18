@@ -423,9 +423,18 @@ public class FirstPersonController : MonoBehaviour
 
         if (enableZoom)
         {
+            WeaponHandler activeWeapon = GetActiveWeapon();
+            bool canAimWithActiveWeapon = activeWeapon != null && activeWeapon.CanAim;
+            float targetZoomFov = GetAimZoomFov(activeWeapon);
+
+            if (!canAimWithActiveWeapon)
+            {
+                isZoomed = false;
+            }
+
             // Changes isZoomed when key is pressed
             // Behavior for toogle zoom
-            if(Input.GetKeyDown(zoomKey) && !holdToZoom && !isSprinting)
+            if(canAimWithActiveWeapon && Input.GetKeyDown(zoomKey) && !holdToZoom && !isSprinting)
             {
                 if (!isZoomed)
                 {
@@ -439,7 +448,7 @@ public class FirstPersonController : MonoBehaviour
 
             // Changes isZoomed when key is pressed
             // Behavior for hold to zoom
-            if(holdToZoom && !isSprinting)
+            if(canAimWithActiveWeapon && holdToZoom && !isSprinting)
             {
                 if(Input.GetKeyDown(zoomKey))
                 {
@@ -452,9 +461,9 @@ public class FirstPersonController : MonoBehaviour
             }
 
             // Lerps camera.fieldOfView to allow for a smooth transistion
-            if(isZoomed)
+            if(isZoomed && canAimWithActiveWeapon)
             {
-                playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, zoomFOV, zoomStepTime * Time.deltaTime);
+                playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, targetZoomFov, zoomStepTime * Time.deltaTime);
             }
             else if(!isZoomed && !isSprinting)
             {
@@ -623,18 +632,9 @@ public class FirstPersonController : MonoBehaviour
                 float movementSpeed = walkSpeed;
                 if (enableZoom && isZoomed)
                 {
-                    WeaponHandler activeWeapon = null;
-                    if (weaponManager != null)
-                    {
-                        activeWeapon = weaponManager.ActiveWeapon;
-                    }
+                    WeaponHandler activeWeapon = GetActiveWeapon();
 
-                    if (activeWeapon == null)
-                    {
-                        activeWeapon = GetComponentInChildren<WeaponHandler>(true);
-                    }
-
-                    float weaponAimMoveMultiplier = activeWeapon != null
+                    float weaponAimMoveMultiplier = activeWeapon != null && activeWeapon.CanAim
                         ? Mathf.Clamp(activeWeapon.aimMoveSpeedMultiplier, 0.1f, 1f)
                         : 1f;
 
@@ -745,7 +745,9 @@ public class FirstPersonController : MonoBehaviour
 
     void PushArmsAnimationStates(bool force = false)
     {
-        bool currentAimState = enableZoom && isZoomed && !isSprinting;
+        WeaponHandler activeWeapon = GetActiveWeapon();
+        bool canAimWithActiveWeapon = activeWeapon != null && activeWeapon.CanAim;
+        bool currentAimState = enableZoom && isZoomed && !isSprinting && canAimWithActiveWeapon;
         bool currentSprintState = enableSprint && isSprinting;
         bool currentMoveState = playerCanMove && rb != null && new Vector2(rb.linearVelocity.x, rb.linearVelocity.z).sqrMagnitude > 0.0001f;
 
@@ -757,17 +759,6 @@ public class FirstPersonController : MonoBehaviour
         if (armsAnimatorBridge != null && (force || !hasPushedAnimationStates || currentSprintState != lastSprintState))
         {
             armsAnimatorBridge.SetSprintState(currentSprintState);
-        }
-
-        WeaponHandler activeWeapon = null;
-        if (weaponManager != null)
-        {
-            activeWeapon = weaponManager.ActiveWeapon;
-        }
-
-        if (activeWeapon == null)
-        {
-            activeWeapon = GetComponentInChildren<WeaponHandler>(true);
         }
 
         if (activeWeapon != null)
@@ -792,6 +783,26 @@ public class FirstPersonController : MonoBehaviour
         lastSprintState = currentSprintState;
         lastMoveState = currentMoveState;
         hasPushedAnimationStates = true;
+    }
+
+    WeaponHandler GetActiveWeapon()
+    {
+        if (weaponManager != null)
+        {
+            return weaponManager.ActiveWeapon;
+        }
+
+        return GetComponentInChildren<WeaponHandler>(true);
+    }
+
+    float GetAimZoomFov(WeaponHandler weapon)
+    {
+        if (weapon != null && weapon.CanAim)
+        {
+            return Mathf.Clamp(weapon.AimZoomFOV, 0.1f, fov);
+        }
+
+        return zoomFOV;
     }
 }
 

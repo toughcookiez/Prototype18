@@ -1108,6 +1108,8 @@ MonoBehaviour:
   sprintSpreadDegrees: 3
   movementSpreadBonusDegrees: 0.75
   aimMoveSpeedMultiplier: 0.8
+  canAim: 1
+  aimZoomFOV: 40
   useSprayPattern: 1
   sprayPatternInfluence: 0.8
   sprayPatternAimMultiplier: 0.55
@@ -1145,10 +1147,10 @@ MonoBehaviour:
   equipLockDuration: 0.6
   animatorBindings:
     holdTriggerParam: AR_C_Hold
-    fireTriggerParam: Fire
+    fireTriggerParam: AR_C_Fire
     aimFireTriggerParam: 
     reloadStartTriggerParam: ReloadStart
-    aimBoolParam: 
+    aimBoolParam: AR_C_Aim
     sprintBoolParam: 
   magazineSize: 25
   currentMagazineAmmo: 25
