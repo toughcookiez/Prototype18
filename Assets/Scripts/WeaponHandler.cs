@@ -595,7 +595,7 @@ public class WeaponHandler : MonoBehaviour
 
     public void SetAimState(bool aiming)
     {
-        isAiming = canAim && aiming;
+        isAiming = canAim && aiming && !isReloading;
     }
 
     public void SetSprintState(bool sprinting)

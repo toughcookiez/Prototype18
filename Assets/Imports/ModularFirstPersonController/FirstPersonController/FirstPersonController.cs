@@ -424,7 +424,7 @@ public class FirstPersonController : MonoBehaviour
         if (enableZoom)
         {
             WeaponHandler activeWeapon = GetActiveWeapon();
-            bool canAimWithActiveWeapon = activeWeapon != null && activeWeapon.CanAim;
+            bool canAimWithActiveWeapon = activeWeapon != null && activeWeapon.CanAim && !activeWeapon.IsReloading;
             float targetZoomFov = GetAimZoomFov(activeWeapon);
 
             if (!canAimWithActiveWeapon)
@@ -746,7 +746,7 @@ public class FirstPersonController : MonoBehaviour
     void PushArmsAnimationStates(bool force = false)
     {
         WeaponHandler activeWeapon = GetActiveWeapon();
-        bool canAimWithActiveWeapon = activeWeapon != null && activeWeapon.CanAim;
+        bool canAimWithActiveWeapon = activeWeapon != null && activeWeapon.CanAim && !activeWeapon.IsReloading;
         bool currentAimState = enableZoom && isZoomed && !isSprinting && canAimWithActiveWeapon;
         bool currentSprintState = enableSprint && isSprinting;
         bool currentMoveState = playerCanMove && rb != null && new Vector2(rb.linearVelocity.x, rb.linearVelocity.z).sqrMagnitude > 0.0001f;

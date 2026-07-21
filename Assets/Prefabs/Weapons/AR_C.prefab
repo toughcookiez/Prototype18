@@ -511,7 +511,7 @@ Transform:
   m_GameObject: {fileID: 2768235557395373463}
   serializedVersion: 2
   m_LocalRotation: {x: 0.000000021855694, y: 0, z: -0, w: 1}
-  m_LocalPosition: {x: -0, y: 0.11250001, z: 0.265}
+  m_LocalPosition: {x: 0, y: 0.11250001, z: 0.265}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1148,14 +1148,14 @@ MonoBehaviour:
   animatorBindings:
     holdTriggerParam: AR_C_Hold
     fireTriggerParam: AR_C_Fire
-    aimFireTriggerParam: 
-    reloadStartTriggerParam: ReloadStart
+    aimFireTriggerParam: AR_C_AimFire
+    reloadStartTriggerParam: AR_C_Reload
     aimBoolParam: AR_C_Aim
     sprintBoolParam: 
   magazineSize: 25
   currentMagazineAmmo: 25
   reserveAmmo: 50
-  reloadDuration: 1.4
+  reloadDuration: 3.1
   reloadKey: 114
   audioSource: {fileID: 4922872626936001659}
   shootClip: {fileID: 8300000, guid: 1a3cc27d5349033479db88e8268f0d61, type: 3}
