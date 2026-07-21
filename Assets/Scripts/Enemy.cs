@@ -24,6 +24,7 @@ public class Enemy : MonoBehaviour
     public string idleBoolParam = "IsIdle";
     public string moveBoolParam = "IsMoving";
     public string attackTriggerParam = "Attack";
+    public string[] attackTriggerParams = Array.Empty<string>();
     public string[] hurtTriggerParams = { "Hurt" };
     public BodyPartHurtTrigger[] bodyPartHurtTriggers =
     {
@@ -37,7 +38,7 @@ public class Enemy : MonoBehaviour
     public string hurtLayerName = "Hurt";
     private int idleBoolHash;
     private int moveBoolHash;
-    private int attackTriggerHash;
+    private int[] attackTriggerHashes = Array.Empty<int>();
     private int[] hurtTriggerHashes = Array.Empty<int>();
     private Dictionary<EnemyBodyPart, int> bodyPartHurtTriggerHashes = new Dictionary<EnemyBodyPart, int>();
     private int hurtLayerIndex = -1;
@@ -102,7 +103,7 @@ public class Enemy : MonoBehaviour
 
         idleBoolHash = Animator.StringToHash(idleBoolParam);
         moveBoolHash = Animator.StringToHash(moveBoolParam);
-        attackTriggerHash = Animator.StringToHash(attackTriggerParam);
+        CacheAttackTriggerHashes();
         CacheHurtTriggerHashes();
         CacheBodyPartHurtTriggerHashes();
 
@@ -132,6 +133,7 @@ public class Enemy : MonoBehaviour
 
     void OnValidate()
     {
+        CacheAttackTriggerHashes();
         CacheHurtTriggerHashes();
         CacheBodyPartHurtTriggerHashes();
 
@@ -212,13 +214,39 @@ public class Enemy : MonoBehaviour
 
     void Attack()
     {
-        if (animator != null)
+        if (animator != null && attackTriggerHashes.Length > 0)
         {
-            animator.SetTrigger(attackTriggerHash);
+            int selectedIndex = UnityEngine.Random.Range(0, attackTriggerHashes.Length);
+            animator.SetTrigger(attackTriggerHashes[selectedIndex]);
         }
 
         // Reset damage gate for this swing
         hasDealtDamageThisSwing = false;
+    }
+
+    void CacheAttackTriggerHashes()
+    {
+        List<int> hashes = new List<int>();
+
+        if (attackTriggerParams != null && attackTriggerParams.Length > 0)
+        {
+            for (int i = 0; i < attackTriggerParams.Length; i++)
+            {
+                string param = attackTriggerParams[i];
+                if (string.IsNullOrWhiteSpace(param))
+                    continue;
+
+                hashes.Add(Animator.StringToHash(param));
+            }
+        }
+
+        // Backward compatibility: keep existing single param usable on old prefabs.
+        if (hashes.Count == 0 && !string.IsNullOrWhiteSpace(attackTriggerParam))
+        {
+            hashes.Add(Animator.StringToHash(attackTriggerParam));
+        }
+
+        attackTriggerHashes = hashes.ToArray();
     }
 
     /// <summary>
