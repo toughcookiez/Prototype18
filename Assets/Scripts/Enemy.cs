@@ -50,7 +50,11 @@ public class Enemy : MonoBehaviour
     public float attackRange = 2f;
     public float attackCooldown = 1f;
     public float damage = 10f;
-    private float lastAttackTime = -Mathf.Infinity;
+    [Header("Combat Variation")]
+    public Vector2 firstAttackDelayRange = new Vector2(0.1f, 0.9f);
+    public Vector2 attackCooldownMultiplierRange = new Vector2(0.85f, 1.2f);
+    public Vector2 animatorSpeedRange = new Vector2(0.95f, 1.08f);
+    private float nextAttackTime;
     private bool isAttacking = false;
     private bool hasDealtDamageThisSwing = false;
 
@@ -64,6 +68,11 @@ public class Enemy : MonoBehaviour
     private Coroutine hurtLayerCoroutine;
     private bool isHitStunned;
     private bool isDead;
+
+    [Header("Formation")]
+    public float formationRadius = 1f;
+    private Vector3 formationOffset;
+    public Vector2Int avoidancePriorityRange = new Vector2Int(30, 70);
 
     [Header("Ragdoll")]
     public bool useRagdoll = true;
@@ -82,6 +91,9 @@ public class Enemy : MonoBehaviour
             enabled = false;
             return;
         }
+
+        // Set a random avoidance priority to help prevent enemies from clustering too much
+        navMeshAgent.avoidancePriority = UnityEngine.Random.Range(avoidancePriorityRange.x, avoidancePriorityRange.y + 1);
 
         if (animator == null)
         {
@@ -102,9 +114,17 @@ public class Enemy : MonoBehaviour
             {
                 animator.SetLayerWeight(hurtLayerIndex, 0f);
             }
+
+            // Slight per-enemy animator speed variance helps avoid visual sync.
+            float randomAnimatorSpeed = UnityEngine.Random.Range(animatorSpeedRange.x, animatorSpeedRange.y);
+            animator.speed = Mathf.Max(0.1f, randomAnimatorSpeed);
         }
 
         currentHealth = health;
+
+        float angle = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
+        formationOffset = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * formationRadius;
+        nextAttackTime = Time.time + UnityEngine.Random.Range(firstAttackDelayRange.x, firstAttackDelayRange.y);
 
         InitializeRagdollParts();
         SetRagdollActive(false);
@@ -114,6 +134,21 @@ public class Enemy : MonoBehaviour
     {
         CacheHurtTriggerHashes();
         CacheBodyPartHurtTriggerHashes();
+
+        if (firstAttackDelayRange.x > firstAttackDelayRange.y)
+            firstAttackDelayRange = new Vector2(firstAttackDelayRange.y, firstAttackDelayRange.x);
+
+        if (attackCooldownMultiplierRange.x > attackCooldownMultiplierRange.y)
+            attackCooldownMultiplierRange = new Vector2(attackCooldownMultiplierRange.y, attackCooldownMultiplierRange.x);
+
+        attackCooldownMultiplierRange.x = Mathf.Max(0.05f, attackCooldownMultiplierRange.x);
+        attackCooldownMultiplierRange.y = Mathf.Max(0.05f, attackCooldownMultiplierRange.y);
+
+        if (animatorSpeedRange.x > animatorSpeedRange.y)
+            animatorSpeedRange = new Vector2(animatorSpeedRange.y, animatorSpeedRange.x);
+
+        animatorSpeedRange.x = Mathf.Max(0.1f, animatorSpeedRange.x);
+        animatorSpeedRange.y = Mathf.Max(0.1f, animatorSpeedRange.y);
     }
 
     void Start()
@@ -149,9 +184,11 @@ public class Enemy : MonoBehaviour
 
         if (distanceToPlayer > attackRange)
         {
-            // Chase the player
+            // Chase the player, spreading out via a lerped formation offset
             navMeshAgent.isStopped = false;
-            navMeshAgent.SetDestination(playerTransform.position);
+            float t = Mathf.InverseLerp(attackRange * 2f, attackRange, distanceToPlayer);
+            Vector3 offset = Vector3.Lerp(formationOffset, Vector3.zero, t);
+            navMeshAgent.SetDestination(playerTransform.position + offset);
             isAttacking = false;
             SetMovementAnimation(true);
         }
@@ -163,10 +200,12 @@ public class Enemy : MonoBehaviour
             SetMovementAnimation(false);
 
             // Check if cooldown has expired
-            if (Time.time >= lastAttackTime + attackCooldown)
+            if (Time.time >= nextAttackTime)
             {
                 Attack();
-                lastAttackTime = Time.time;
+                float cooldownMultiplier = UnityEngine.Random.Range(attackCooldownMultiplierRange.x, attackCooldownMultiplierRange.y);
+                float randomizedCooldown = attackCooldown * cooldownMultiplier;
+                nextAttackTime = Time.time + Mathf.Max(0.05f, randomizedCooldown);
             }
         }
     }
