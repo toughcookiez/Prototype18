@@ -51584,6 +51584,63 @@ Mesh:
       - serializedVersion: 1
         m_IndexStart: 0
         m_IndexCount: 0
+--- !u!1001 &27161310868651171
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 2982389773003600537, guid: 30f789478615fd04db7d14c251f7ad20, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 1.26426
+      objectReference: {fileID: 0}
+    - target: {fileID: 2982389773003600537, guid: 30f789478615fd04db7d14c251f7ad20, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2982389773003600537, guid: 30f789478615fd04db7d14c251f7ad20, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -4.45545
+      objectReference: {fileID: 0}
+    - target: {fileID: 2982389773003600537, guid: 30f789478615fd04db7d14c251f7ad20, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2982389773003600537, guid: 30f789478615fd04db7d14c251f7ad20, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2982389773003600537, guid: 30f789478615fd04db7d14c251f7ad20, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2982389773003600537, guid: 30f789478615fd04db7d14c251f7ad20, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2982389773003600537, guid: 30f789478615fd04db7d14c251f7ad20, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2982389773003600537, guid: 30f789478615fd04db7d14c251f7ad20, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2982389773003600537, guid: 30f789478615fd04db7d14c251f7ad20, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4374830182062160155, guid: 30f789478615fd04db7d14c251f7ad20, type: 3}
+      propertyPath: m_Name
+      value: BiggerZombie
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 30f789478615fd04db7d14c251f7ad20, type: 3}
 --- !u!1 &440992752205155377 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3953237772891223920, guid: 68f5fb6c8ed4eaf4b8c762ba65fbe4e5, type: 3}
@@ -52061,6 +52118,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: RunningZombie
       objectReference: {fileID: 0}
+    - target: {fileID: 7077832852119048940, guid: 10c4ac22fcf89ae4d8ee8de67074ceb8, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -52081,3 +52142,4 @@ SceneRoots:
   - {fileID: 1369380465}
   - {fileID: 8289457176931917573}
   - {fileID: 471250006}
+  - {fileID: 27161310868651171}
